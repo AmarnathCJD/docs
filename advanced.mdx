@@ -1,0 +1,61 @@
+---
+title: "Advanced Features"
+description: "Upcoming advanced security features"
+icon: "shield"
+---
+
+## Roadmap
+
+Gogram is continuously evolving to provide cutting-edge security and privacy features for Telegram automation.
+
+<CardGroup cols={2}>
+  <Card title="Perfect Forward Secrecy" icon="lock">
+    Enhanced cryptographic security ensuring that session keys cannot be compromised even if long-term secrets are exposed.
+  </Card>
+  <Card title="End-to-End Secret Chats" icon="user-lock">
+    Native support for Telegram's secret chats with client-to-client encryption, self-destructing messages, and no server storage.
+  </Card>
+</CardGroup>
+
+<Note>
+  These features are currently in planning stages. Follow our [GitHub repository](https://github.com/amarnathcjd/gogram) for updates and implementation progress.
+</Note>
+
+## Why These Matter
+
+<AccordionGroup>
+  <Accordion title="Perfect Forward Secrecy (PFS)" icon="shield-halved">
+    PFS ensures that even if an attacker compromises your current session keys, they cannot decrypt past communications. Each session uses unique, ephemeral keys that are discarded after use.
+    
+    **Benefits:**
+    - Past messages remain secure
+    - Session compromise is isolated
+    - Enhanced privacy guarantees
+  </Accordion>
+
+  <Accordion title="Secret Chats Support" icon="comments">
+    Secret chats provide end-to-end encryption directly between clients, bypassing Telegram's cloud infrastructure entirely. Messages are encrypted on your device and can only be decrypted by the recipient.
+    
+    **Benefits:**
+    - True end-to-end encryption
+    - Self-destruct timers
+    - No message forwarding
+    - Screenshot notifications
+    - No cloud backup
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  Want to contribute or discuss these features? Join our [community chat](https://t.me/gogrammers) or open an issue on GitHub!
+</Tip>
+
+## Stay Updated
+
+<CardGroup cols={2}>
+  <Card title="GitHub" icon="github" href="https://github.com/amarnathcjd/gogram">
+    Star the repository and watch for updates
+  </Card>
+  <Card title="Community" icon="telegram" href="https://t.me/gogrammers">
+    Join discussions about upcoming features
+  </Card>
+</CardGroup>

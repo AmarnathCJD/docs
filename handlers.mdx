@@ -1,6 +1,7 @@
 ---
 title: "Handling Updates"
 description: "Handle incoming updates with Gogram's event system"
+icon: "bolt"
 ---
 
 ## Overview
@@ -52,7 +53,7 @@ client.On("callback", func(c *telegram.CallbackQuery) error {
 
 Handle [InlineQuery](/handlers/updates/inline) updates when users type `@yourbot query`:
 
-```go
+```go 
 client.On("inline", func(q *telegram.InlineQuery) error {
     builder := q.Builder()
     builder.Article("Result", "Description", "Text")
@@ -190,6 +191,21 @@ client.On("callback", func(c *telegram.CallbackQuery) error {
     return nil
 })
 ```
+
+<ResponseField name="CallbackOptions" type="struct">
+  <Expandable title="Text" type="string">
+    Text to display in the notification shown to the user. Limited to 200 characters.
+  </Expandable>
+  <Expandable title="Alert" type="bool">
+    Whether to show the answer as an alert (popup) instead of a toast notification.
+  </Expandable>
+  <Expandable title="URL" type="string">
+    URL to open in the user's browser. Only works if the button was attached to a message sent by the bot.
+  </Expandable>
+  <Expandable title="CacheTime" type="int32">
+    The maximum amount of time in seconds that the result of the callback query may be cached client-side. Default is 0.
+  </Expandable>
+</ResponseField>
 
 ### Inline Queries
 

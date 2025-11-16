@@ -1,43 +1,47 @@
 ---
 title: "Client Config"
 description: "Complete guide to configuring Gogram client"
+icon: "gear"
 ---
 
 ## Overview
 
 The `ClientConfig` struct provides extensive configuration options to customize your Gogram client behavior, from basic authentication to advanced networking settings.
 
-## Basic Configuration
+<AccordionGroup>
+  <Accordion title="Quick Start Example" icon="rocket">
+    ```go
+    client, err := telegram.NewClient(telegram.ClientConfig{
+        AppID:   6,
+        AppHash: "your_app_hash",
+    })
+    ```
+    
+    <Note>
+      While `AppHash` is optional in the config, it's required for authentication and certain API methods. You can omit it only if you're importing an existing session.
+    </Note>
+  </Accordion>
+</AccordionGroup>
 
-```go
-client, err := telegram.NewClient(telegram.ClientConfig{
-    AppID:   6,
-    AppHash: "your_app_hash", // Optional, but required for authentication
-})
-```
+## Configuration Reference
 
-<Note>
-  While `AppHash` is optional in the config, it's required for authentication and certain API methods. You can omit it only if you're importing an existing session.
-</Note>
+<AccordionGroup>
+  <Accordion title="Essential Configuration" icon="gear" defaultOpen>
+    <ParamField path="AppID" type="int32" required>
+      The App ID from [my.telegram.org](https://my.telegram.org). Required for all clients.
+    </ParamField>
 
-## Configuration Fields
+    <ParamField path="AppHash" type="string">
+      The App Hash from [my.telegram.org](https://my.telegram.org). Optional in config, but **required for**:
+      - Authentication (Login/LoginBot)
+      - Certain API methods that need app credentials
+      - Initial client setup without existing session
+      
+      Can be omitted if you're importing an already authenticated session.
+    </ParamField>
+  </Accordion>
 
-### Required Fields
-
-<ParamField path="AppID" type="int32" required>
-  The App ID from [my.telegram.org](https://my.telegram.org). Required for all clients.
-</ParamField>
-
-<ParamField path="AppHash" type="string">
-  The App Hash from [my.telegram.org](https://my.telegram.org). Optional in config, but **required for**:
-  - Authentication (Login/LoginBot)
-  - Certain API methods that need app credentials
-  - Initial client setup without existing session
-  
-  Can be omitted if you're importing an already authenticated session.
-</ParamField>
-
-### Session Management
+  <Accordion title="Session Management" icon="database">
 
 <ParamField path="Session" type="string" default="session.dat">
   The session file path to use for storing authentication data.
@@ -79,8 +83,9 @@ client, err := telegram.NewClient(telegram.ClientConfig{
   MemorySession: true
   ```
 </ParamField>
+  </Accordion>
 
-### Device Configuration
+  <Accordion title="Device Configuration" icon="mobile">
 
 <ParamField path="DeviceConfig" type="DeviceConfig">
   Device information sent to Telegram servers.
@@ -96,7 +101,29 @@ client, err := telegram.NewClient(telegram.ClientConfig{
   ```
 </ParamField>
 
-### Network Configuration
+<ResponseField name="DeviceConfig" type="struct">
+  <Expandable title="DeviceModel" type="string" required>
+    The device model name (e.g., "IPhone", "Samsung Galaxy", "Server")
+  </Expandable>
+  <Expandable title="SystemVersion" type="string" required>
+    Operating system version (e.g., "17.0", "13.0", "Ubuntu 20.04")
+  </Expandable>
+  <Expandable title="AppVersion" type="string" required>
+    Application version (e.g., "1.0.0", "2.1.5")
+  </Expandable>
+  <Expandable title="LangCode" type="string" required>
+    Language code for the application (e.g., "en", "es", "ru")
+  </Expandable>
+  <Expandable title="SystemLangCode" type="string" required>
+    System language code (e.g., "en-US", "es-ES", "ru-RU")
+  </Expandable>
+  <Expandable title="LangPack" type="string">
+    Language pack identifier (optional, can be empty)
+  </Expandable>
+</ResponseField>
+  </Accordion>
+
+  <Accordion title="Network Configuration" icon="network-wired">
 
 <ParamField path="DataCenter" type="int" default="4">
   The data center to connect to (1-5). Default is DC 4.
@@ -154,8 +181,9 @@ client, err := telegram.NewClient(telegram.ClientConfig{
   UseWebSocketTLS: true
   ```
 </ParamField>
+  </Accordion>
 
-### Transport & Protocol
+  <Accordion title="Transport & Protocol" icon="exchange-alt">
 
 <ParamField path="TransportMode" type="string" default="Abridged">
   The transport mode to use. Options: `Abridged`, `Intermediate`, `PaddedIntermediate`, `Full`.
@@ -180,8 +208,9 @@ client, err := telegram.NewClient(telegram.ClientConfig{
   TestMode: true
   ```
 </ParamField>
+  </Accordion>
 
-### Behavior & Features
+  <Accordion title="Behavior & Features" icon="sliders">
 
 <ParamField path="ParseMode" type="string" default="HTML">
   Default parse mode for messages. Options: `HTML`, `Markdown`.
@@ -230,8 +259,9 @@ client, err := telegram.NewClient(telegram.ClientConfig{
   NoPreconnect: true
   ```
 </ParamField>
+  </Accordion>
 
-### Commands & Messages
+  <Accordion title="Commands & Messages" icon="terminal">
 
 <ParamField path="CommandPrefixes" type="string" default="/!">
   Command prefixes to recognize. Can be multiple characters.
@@ -248,8 +278,9 @@ client, err := telegram.NewClient(telegram.ClientConfig{
   AlbumWaitTime: 1000 // 1 second
   ```
 </ParamField>
+  </Accordion>
 
-### Rate Limiting & Timeouts
+  <Accordion title="Rate Limiting & Timeouts" icon="clock">
 
 <ParamField path="SleepThresholdMs" type="int" default="10000">
   Threshold in milliseconds to sleep before flood wait.
@@ -285,8 +316,9 @@ client, err := telegram.NewClient(telegram.ClientConfig{
   }
   ```
 </ParamField>
+  </Accordion>
 
-### Logging
+  <Accordion title="Logging & Error Handling" icon="file-lines">
 
 <ParamField path="LogLevel" type="LogLevel" default="InfoLevel">
   The library log level. Options: `DebugLevel`, `InfoLevel`, `WarnLevel`, `ErrorLevel`.
@@ -313,25 +345,32 @@ client, err := telegram.NewClient(telegram.ClientConfig{
   }
   ```
 </ParamField>
+  </Accordion>
+</AccordionGroup>
 
 ## Using ClientConfigBuilder
 
-For more convenient configuration, use the `ClientConfigBuilder`:
+<Tip>
+  For cleaner, more maintainable code, use the builder pattern instead of direct struct initialization.
+</Tip>
 
-```go
-config := telegram.NewClientConfigBuilder(6, "your_app_hash").
-    WithDeviceConfig("IPhone", "17.0", "1.0.0", "en", "en-US", "ios").
-    WithSession("my_session.dat").
-    WithParseMode("Markdown").
-    WithDataCenter(2).
-    WithProxy("socks5://localhost:1080").
-    WithLogLevel(telegram.DebugLevel).
-    Build()
+<AccordionGroup>
+  <Accordion title="Builder Example" icon="code" defaultOpen>
+    ```go
+    config := telegram.NewClientConfigBuilder(6, "your_app_hash").
+        WithDeviceConfig("IPhone", "17.0", "1.0.0", "en", "en-US", "ios").
+        WithSession("my_session.dat").
+        WithParseMode("Markdown").
+        WithDataCenter(2).
+        WithProxy("socks5://localhost:1080").
+        WithLogLevel(telegram.DebugLevel).
+        Build()
 
-client, err := telegram.NewClient(config)
-```
+    client, err := telegram.NewClient(config)
+    ```
+  </Accordion>
 
-### Builder Methods
+  <Accordion title="Available Builder Methods" icon="list">
 
 <CodeGroup>
 
@@ -432,38 +471,44 @@ WithReqTimeout(reqTimeout int)
 ```
 
 </CodeGroup>
+  </Accordion>
+</AccordionGroup>
 
 ## Complete Example
 
-```go
-package main
+<AccordionGroup>
+  <Accordion title="Production-Ready Bot Configuration" icon="robot">
+    ```go
+    package main
 
-import (
-    "log"
-    "github.com/amarnathcjd/gogram/telegram"
-)
+    import (
+        "log"
+        "github.com/amarnathcjd/gogram/telegram"
+    )
 
-func main() {
-    // Using builder pattern
-    config := telegram.NewClientConfigBuilder(6, "your_app_hash").
-        WithDeviceConfig("Server", "1.0", "1.0.0", "en", "en-US", "").
-        WithSession("session.dat").
-        WithParseMode("HTML").
-        WithLogLevel(telegram.InfoLevel).
-        Build()
-    
-    client, err := telegram.NewClient(config)
-    if err != nil {
-        log.Fatal(err)
+    func main() {
+        // Using builder pattern
+        config := telegram.NewClientConfigBuilder(6, "your_app_hash").
+            WithDeviceConfig("Server", "1.0", "1.0.0", "en", "en-US", "").
+            WithSession("session.dat").
+            WithParseMode("HTML").
+            WithLogLevel(telegram.InfoLevel).
+            Build()
+        
+        client, err := telegram.NewClient(config)
+        if err != nil {
+            log.Fatal(err)
+        }
+        
+        client.Conn()
+        client.LoginBot("BOT_TOKEN")
+        
+        log.Println("Bot started successfully!")
+        client.Idle()
     }
-    
-    client.Conn()
-    client.LoginBot("BOT_TOKEN")
-    
-    log.Println("Bot started successfully!")
-    client.Idle()
-}
-```
+    ```
+  </Accordion>
+</AccordionGroup>
 
 ## Best Practices
 

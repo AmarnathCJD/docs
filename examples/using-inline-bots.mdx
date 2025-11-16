@@ -82,7 +82,7 @@ func main() {
 
 <Tabs>
 <Tab title="Search Images">
-```go
+```go Search Images icon="golang"
 // Use @pic bot to search for images
 func SearchImages(client *telegram.Client, query string) {
 	results, err := client.InlineQuery("@pic", &telegram.InlineOptions{
@@ -105,8 +105,31 @@ func SearchImages(client *telegram.Client, query string) {
 ```
 </Tab>
 
+<Tab title="Search GIFs">
+```go Search GIFs icon="golang"
+// Use @gif bot to search for GIFs
+func SearchGIFs(client *telegram.Client, query string) {
+	results, err := client.InlineQuery("@gif", &telegram.InlineOptions{
+		Dialog: "me",
+		Query:  query,
+	})
+	
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	
+	// Send all results to a channel
+	for _, result := range results {
+		client.SendInlineResult("@mychannel", result)
+		time.Sleep(1 * time.Second) // Rate limiting
+	}
+}
+```
+</Tab>
+
 <Tab title="YouTube Search">
-```go
+```go YouTube Search icon="golang"
 // Use @youtube bot to search videos
 func SearchYouTube(client *telegram.Client, query string, chat string) {
 	results, err := client.InlineQuery("@youtube", &telegram.InlineOptions{
@@ -128,6 +151,64 @@ func SearchYouTube(client *telegram.Client, query string, chat string) {
 	// (In a real bot, you'd use keyboards for selection)
 }
 ```
+</Tab>
+
+<Tab title="Location-Based">
+```go Location Search icon="golang"
+// Use location-based inline bot
+func SearchNearby(client *telegram.Client, lat, long float64) {
+	results, err := client.InlineQuery("@foursquare", &telegram.InlineOptions{
+		Dialog: "me",
+		Query:  "restaurants",
+		GeoPoint: &telegram.InputGeoPoint{
+			Lat:  lat,
+			Long: long,
+		},
+	})
+	
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	
+	fmt.Printf("Found %d nearby places\n", len(results))
+}
+```
+</Tab>
+
+<Tab title="With Pagination">
+```go Pagination Example icon="golang"
+// Get more results using pagination
+func GetAllResults(client *telegram.Client, botUsername, query string) {
+	offset := ""
+	allResults := []telegram.InlineResult{}
+	
+	for {
+		results, err := client.InlineQuery(botUsername, &telegram.InlineOptions{
+			Dialog: "me",
+			Query:  query,
+			Offset: offset,
+		})
+		
+		if err != nil || len(results) == 0 {
+			break
+		}
+		
+		allResults = append(allResults, results...)
+		
+		// Get next offset (implementation depends on bot)
+		// Some bots include offset in response
+		offset = getNextOffset(results)
+		
+		if offset == "" {
+			break
+		}
+	}
+	
+	fmt.Printf("Total results: %d\n", len(allResults))
+}
+```
+</Tab>
 </Tabs>
 
 ## Popular Inline Bots

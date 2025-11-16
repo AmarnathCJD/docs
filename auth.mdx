@@ -137,6 +137,18 @@ client.Login("+1234567890", &telegram.LoginOptions{
 })
 ```
 
+<ResponseField name="LoginOptions" type="struct">
+  <Expandable title="CodeCallback" type="func() (string, error)">
+    Custom function to retrieve the verification code sent to your phone. Return the code as a string or an error if retrieval fails.
+  </Expandable>
+  <Expandable title="PasswordCallback" type="func() (string, error)">
+    Custom function to retrieve the 2FA password. Return the password as a string or an error if retrieval fails.
+  </Expandable>
+  <Expandable title="MaxRetries" type="int">
+    Maximum number of retry attempts for invalid codes or passwords. Default is 3.
+  </Expandable>
+</ResponseField>
+
 ## Session Management
 
 Gogram automatically saves your session to avoid re-authentication on every restart.
@@ -154,6 +166,27 @@ client, err := telegram.NewClient(telegram.ClientConfig{
     SessionAESKey: "12345678901234567890123456789012"
 })
 ```
+
+<ResponseField name="ClientConfig" type="struct">
+  <Expandable title="AppID" type="int32" required>
+    Your Telegram application ID obtained from my.telegram.org
+  </Expandable>
+  <Expandable title="AppHash" type="string" required>
+    Your Telegram application hash obtained from my.telegram.org
+  </Expandable>
+  <Expandable title="SessionName" type="string">
+    Custom name for the session. Used as a prefix for session files. Default is empty.
+  </Expandable>
+  <Expandable title="Session" type="string">
+    Custom session filename or path. Default is "session.dat"
+  </Expandable>
+  <Expandable title="SessionAESKey" type="string">
+    32-character key used to encrypt the session file. If not provided, session is stored unencrypted.
+  </Expandable>
+  <Expandable title="StringSession" type="string">
+    Base64-encoded session string for session import. Alternative to file-based sessions.
+  </Expandable>
+</ResponseField>
 
 <Note>session.dat is the default session file name</Note>
 <Note>If you use more than one account or bot in the same program or directory, make sure their Session or SessionName fields are unique to prevent authentication data from being overwritten.</Note>
@@ -204,6 +237,24 @@ type Session struct {
     AppID    int32  // APP_ID
 }
 ```
+
+<ResponseField name="Session" type="struct">
+  <Expandable title="Key" type="[]byte">
+    The authorization key used for authentication with Telegram servers.
+  </Expandable>
+  <Expandable title="Hash" type="[]byte">
+    SHA1 hash of the authorization key for verification purposes.
+  </Expandable>
+  <Expandable title="Salt" type="int64">
+    Server salt used in message encryption and authentication.
+  </Expandable>
+  <Expandable title="Hostname" type="string">
+    IP address of the data center the session is connected to.
+  </Expandable>
+  <Expandable title="AppID" type="int32">
+    The application ID associated with this session.
+  </Expandable>
+</ResponseField>
 
 **Export and Import Raw Session:**
 
