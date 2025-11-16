@@ -24,25 +24,39 @@
           {
             "group": "Core Concepts",
             "pages": [
+              "invoke",
+              "handlers",
+              "errors",
               "cache",
-              "proxy",
-              "handlers"
+              "proxy"
             ]
           },
           {
-            "group": "Handlers",
+            "group": "Updates",
             "pages": [
               "handlers/filters",
-              "handlers/updates"
-            ]
-          },
-          {
-            "group": "Update Types",
-            "pages": [
               "handlers/updates/newmessage",
               "handlers/updates/album",
               "handlers/updates/callback",
               "handlers/updates/inline"
+            ]
+          },
+          {
+            "group": "Examples",
+            "pages": [
+              "examples",
+              "examples/hello-world",
+              "examples/echo-bot",
+              "examples/welcome-bot",
+              "examples/get-history",
+              "examples/get-chat-members",
+              "examples/get-dialogs",
+              "examples/callback-queries",
+              "examples/inline-queries",
+              "examples/using-inline-bots",
+              "examples/bot-keyboards",
+              "examples/raw-updates",
+              "examples/basic-bot"
             ]
           },
           {

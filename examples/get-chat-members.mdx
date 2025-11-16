@@ -1,0 +1,212 @@
+---
+title: "Get Chat Members"
+description: "Retrieve and list members from groups and channels"
+---
+
+## Overview
+
+This example demonstrates how to fetch members from a chat (group or channel) with filtering options like admins, bots, or recent members.
+
+## Code
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+	// Create a new Telegram client
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:   6,
+		AppHash: "YOUR_APP_HASH",
+	})
+	
+	// Login with your phone number (user account)
+	client.Login("+1234567890")
+	
+	// Get all admin members from a chat
+	// Use negative chat ID for groups/channels (e.g., -100123456789)
+	messages, count, _ := client.GetChatMembers(-100123456789, &telegram.ParticipantOptions{
+		Filter: &telegram.ChannelParticipantsAdmins{}, // Filter for admins only
+	})
+	
+	// Alternative: Use IterChatMembers() for yielding members one by one
+	// Useful for large groups to avoid loading all members into memory
+	
+	// Print total admin count
+	fmt.Printf("Total Admins: %d\n", count)
+	
+	// Iterate through each admin member
+	for _, m := range messages {
+		fmt.Printf("Admin: %s (ID: %d)\n", m.User.FirstName, m.User.ID)
+	}
+
+	// Keep the client running
+	client.Idle()
+}
+```
+
+## How It Works
+
+1. **Authentication**: Connects using user account (required for accessing chat members)
+2. **Fetch Members**: Calls `GetChatMembers()` with chat ID and filter options
+3. **Filter Results**: Uses `ChannelParticipantsAdmins` to get only admin members
+4. **Display Information**: Prints each admin's name and user ID
+
+## Participant Filters
+
+Use different filters to get specific member types:
+
+<Tabs>
+<Tab title="All Members">
+```go
+members, count, _ := client.GetChatMembers(chatID, &telegram.ParticipantOptions{
+	Filter: &telegram.ChannelParticipantsRecent{}, // Recent members
+	Limit:  100, // Maximum members to fetch (default: 200)
+})
+
+fmt.Printf("Total Members: %d\n", count)
+for _, m := range members {
+	fmt.Printf("%s (@%s)\n", m.User.FirstName, m.User.Username)
+}
+```
+</Tab>
+
+<Tab title="Admins Only">
+```go
+admins, count, _ := client.GetChatMembers(chatID, &telegram.ParticipantOptions{
+	Filter: &telegram.ChannelParticipantsAdmins{},
+})
+
+for _, admin := range admins {
+	// Check admin rights
+	if admin.Participant != nil {
+		fmt.Printf("Admin: %s\n", admin.User.FirstName)
+	}
+}
+```
+</Tab>
+
+<Tab title="Bots Only">
+```go
+bots, count, _ := client.GetChatMembers(chatID, &telegram.ParticipantOptions{
+	Filter: &telegram.ChannelParticipantsBots{},
+})
+
+for _, bot := range bots {
+	fmt.Printf("Bot: @%s\n", bot.User.Username)
+}
+```
+</Tab>
+
+<Tab title="Kicked Members">
+```go
+kicked, count, _ := client.GetChatMembers(chatID, &telegram.ParticipantOptions{
+	Filter: &telegram.ChannelParticipantsKicked{},
+})
+
+for _, user := range kicked {
+	fmt.Printf("Kicked: %s (ID: %d)\n", user.User.FirstName, user.User.ID)
+}
+```
+</Tab>
+
+<Tab title="Search by Name">
+```go
+results, count, _ := client.GetChatMembers(chatID, &telegram.ParticipantOptions{
+	Query: "John", // Search for members with "John" in their name
+	Limit: 50,
+})
+
+fmt.Printf("Found %d users matching 'John'\n", count)
+```
+</Tab>
+</Tabs>
+
+## Using IterChatMembers
+
+For large groups, use `IterChatMembers()` to avoid memory issues:
+
+```go
+// Iterate through members one by one
+partsChan, errChan := client.IterChatMembers(chatID, &telegram.ParticipantOptions{
+	Filter: &telegram.ChannelParticipantsRecent{},
+})
+
+for {
+    select {
+    case member, ok := <-partsChan:
+        if !ok {
+            partsChan = nil
+        } else {
+            fmt.Printf("%s (ID: %d)\n", member.User.FirstName, member.User.ID)
+        }
+    case err, ok := <-errChan:
+        if !ok {
+            errChan = nil
+        } else {
+            fmt.Println("Error:", err)
+        }
+    }
+    if partsChan == nil && errChan == nil {
+        break
+    }
+}
+
+if err != nil {
+	fmt.Println("Error:", err)
+}
+```
+
+## ParticipantOptions Parameters
+
+<ParamField path="Filter" type="ChannelParticipantsFilter">
+  Filter type: `Recent`, `Admins`, `Bots`, `Kicked`, `Banned`, `Search`, `Contacts`
+</ParamField>
+
+<ParamField path="Query" type="string">
+  Search query to filter members by name or username
+</ParamField>
+
+<ParamField path="Limit" type="int">
+  Maximum number of members to fetch (default: 200, max: 200 per request)
+</ParamField>
+
+<ParamField path="Offset" type="int">
+  Offset for pagination (use with multiple requests to fetch all members)
+</ParamField>
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` with your actual app hash from [my.telegram.org](https://my.telegram.org)
+2. Replace `+1234567890` with your phone number
+3. Replace `-100123456789` with your target chat ID (use negative IDs for groups/channels)
+4. Run the program
+
+<Note>
+**Important**: This requires a **user account**, not a bot. Bots have limited access to chat members and can only see:
+- Members who have interacted with the bot
+- Admins in groups where the bot is an admin
+</Note>
+
+<Tip>
+To get a chat's ID, you can:
+- Forward a message from the chat to [@userinfobot](https://t.me/userinfobot)
+- Use `client.GetDialogs()` to list all your chats with their IDs
+- Use `client.GetPeerID("@username")` for public groups/channels
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Get Dialogs" icon="comments" href="/examples/get-dialogs">
+    Fetch all your chats and conversations
+  </Card>
+  <Card title="Welcome Bot" icon="hand-wave" href="/examples/welcome-bot">
+    Handle new member joins in groups
+  </Card>
+</CardGroup>

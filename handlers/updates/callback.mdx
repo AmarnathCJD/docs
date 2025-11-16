@@ -3,6 +3,10 @@ title: "CallbackQuery"
 description: "Handle button clicks and callback queries"
 ---
 
+<Note>
+  To use inline buttons with callback data, you need to enable inline mode for your bot. Go to [@BotFather](https://t.me/BotFather), select your bot, go to **Bot Settings** → **Inline Mode** and turn it on.
+</Note>
+
 ## Overview
 
 `CallbackQuery` represents a callback from an inline button click. It's triggered when users click inline keyboard buttons with callback data.
@@ -147,25 +151,23 @@ c.Answer("Cached response", &telegram.CallbackOptions{
     c.Edit("Button was clicked!")
     
     // Edit with options
+    keyboard := telegram.NewKeyboard()
+    keyboard.AddRow(telegram.Button.Data("New Button", "new_data"))
+    
     c.Edit("Updated text", &telegram.SendOptions{
         ParseMode: "HTML",
-        ReplyMarkup: telegram.ReplyInlineMarkup(
-            telegram.Row(
-                telegram.Data("New Button", "new_data"),
-            ),
-        ),
+        ReplyMarkup: keyboard,
     })
     ```
   </Tab>
   <Tab title="Edit Markup">
     ```go
     // Change only buttons
+    keyboard := telegram.NewKeyboard()
+    keyboard.AddRow(telegram.Button.Data("Updated", "updated"))
+    
     c.Edit("Same text", &telegram.SendOptions{
-        ReplyMarkup: telegram.ReplyInlineMarkup(
-            telegram.Row(
-                telegram.Data("Updated", "updated"),
-            ),
-        ),
+        ReplyMarkup: keyboard,
     })
     ```
   </Tab>
@@ -322,34 +324,33 @@ client.On("callback", func(c *telegram.CallbackQuery) error {
     
     switch data {
     case "menu_main":
+        keyboard := telegram.NewKeyboard()
+        keyboard.AddRow(
+            telegram.Button.Data("📝 Help", "menu_help"),
+            telegram.Button.Data("ℹ️ About", "menu_about"),
+        )
+        
         c.Edit("Main Menu", &telegram.SendOptions{
-            ReplyMarkup: telegram.ReplyInlineMarkup(
-                telegram.Row(
-                    telegram.Data("📝 Help", "menu_help"),
-                    telegram.Data("ℹ️ About", "menu_about"),
-                ),
-            ),
+            ReplyMarkup: keyboard,
         })
         c.Answer("Main menu opened")
         
     case "menu_help":
+        keyboard := telegram.NewKeyboard()
+        keyboard.AddRow(telegram.Button.Data("« Back", "menu_main"))
+        
         c.Edit("Help Section\n\nCommands:\n/start\n/help", 
             &telegram.SendOptions{
-                ReplyMarkup: telegram.ReplyInlineMarkup(
-                    telegram.Row(
-                        telegram.Data("« Back", "menu_main"),
-                    ),
-                ),
+                ReplyMarkup: keyboard,
             })
         c.Answer("Help")
         
     case "menu_about":
+        keyboard := telegram.NewKeyboard()
+        keyboard.AddRow(telegram.Button.Data("« Back", "menu_main"))
+        
         c.Edit("About Bot\n\nVersion 1.0", &telegram.SendOptions{
-            ReplyMarkup: telegram.ReplyInlineMarkup(
-                telegram.Row(
-                    telegram.Data("« Back", "menu_main"),
-                ),
-            ),
+            ReplyMarkup: keyboard,
         })
         c.Answer("About")
     }
@@ -379,13 +380,14 @@ client.On("callback:delete_", func(c *telegram.CallbackQuery) error {
 
 // Initial message with confirmation
 client.On("cmd:delete", func(m *telegram.NewMessage) error {
+    keyboard := telegram.NewKeyboard()
+    keyboard.AddRow(
+        telegram.Button.Data("✅ Yes", "delete_confirm"),
+        telegram.Button.Data("❌ No", "delete_cancel"),
+    )
+    
     m.Reply("Are you sure?", telegram.SendOptions{
-        ReplyMarkup: telegram.ReplyInlineMarkup(
-            telegram.Row(
-                telegram.Data("✅ Yes", "delete_confirm"),
-                telegram.Data("❌ No", "delete_cancel"),
-            ),
-        ),
+        ReplyMarkup: keyboard,
     })
     return nil
 })
@@ -408,22 +410,19 @@ client.On("callback:page_", func(c *telegram.CallbackQuery) error {
     text := fmt.Sprintf("Page %d\n\n%s", page, items)
     
     // Build pagination buttons
-    buttons := []telegram.Row{}
+    keyboard := telegram.NewKeyboard()
     
-    navRow := telegram.Row{}
+    row := []telegram.Button{}
     if page > 1 {
-        navRow = append(navRow, 
-            telegram.Data("« Prev", fmt.Sprintf("page_%d", page-1)))
+        row = append(row, telegram.Button.Data("« Prev", fmt.Sprintf("page_%d", page-1)))
     }
-    navRow = append(navRow, 
-        telegram.Data(fmt.Sprintf("· %d ·", page), "page_current"))
-    navRow = append(navRow, 
-        telegram.Data("Next »", fmt.Sprintf("page_%d", page+1)))
+    row = append(row, telegram.Button.Data(fmt.Sprintf("· %d ·", page), "page_current"))
+    row = append(row, telegram.Button.Data("Next »", fmt.Sprintf("page_%d", page+1)))
     
-    buttons = append(buttons, navRow)
+    keyboard.Row(row...)
     
     c.Edit(text, &telegram.SendOptions{
-        ReplyMarkup: telegram.ReplyInlineMarkup(buttons...),
+        ReplyMarkup: keyboard,
     })
     c.Answer(fmt.Sprintf("Page %d", page))
     
@@ -490,12 +489,11 @@ client.On("callback:process", func(c *telegram.CallbackQuery) error {
     time.Sleep(2 * time.Second)
     
     // Show result
+    keyboard := telegram.NewKeyboard()
+    keyboard.AddRow(telegram.Button.Data("Do Again", "process"))
+    
     c.Edit("✅ Complete!", &telegram.SendOptions{
-        ReplyMarkup: telegram.ReplyInlineMarkup(
-            telegram.Row(
-                telegram.Data("Do Again", "process"),
-            ),
-        ),
+        ReplyMarkup: keyboard,
     })
     c.Answer("Done!")
     
@@ -554,16 +552,17 @@ func main() {
     
     // Send button
     client.On("cmd:start", func(m *telegram.NewMessage) error {
+        keyboard := telegram.NewKeyboard()
+        keyboard.AddRow(
+            telegram.Button.Data("👍 Like", "action_like"),
+            telegram.Button.Data("❤️ Love", "action_love"),
+        )
+        keyboard.AddRow(
+            telegram.Button.Data("ℹ️ Info", "action_info"),
+        )
+        
         m.Reply("Welcome! Click a button:", telegram.SendOptions{
-            ReplyMarkup: telegram.ReplyInlineMarkup(
-                telegram.Row(
-                    telegram.Data("👍 Like", "action_like"),
-                    telegram.Data("❤️ Love", "action_love"),
-                ),
-                telegram.Row(
-                    telegram.Data("ℹ️ Info", "action_info"),
-                ),
-            ),
+            ReplyMarkup: keyboard,
         })
         return nil
     })
@@ -587,27 +586,27 @@ func main() {
             c.Edit("You loved this message! ❤️")
             
         case "action_info":
+            keyboard := telegram.NewKeyboard()
+            keyboard.AddRow(telegram.Button.Data("« Back", "action_back"))
+            
             c.Edit("Bot Info\n\nVersion 1.0\nBy @YourBot", 
                 &telegram.SendOptions{
-                    ReplyMarkup: telegram.ReplyInlineMarkup(
-                        telegram.Row(
-                            telegram.Data("« Back", "action_back"),
-                        ),
-                    ),
+                    ReplyMarkup: keyboard,
                 })
             c.Answer("Info")
             
         case "action_back":
+            keyboard := telegram.NewKeyboard()
+            keyboard.AddRow(
+                telegram.Button.Data("👍 Like", "action_like"),
+                telegram.Button.Data("❤️ Love", "action_love"),
+            )
+            keyboard.AddRow(
+                telegram.Button.Data("ℹ️ Info", "action_info"),
+            )
+            
             c.Edit("Welcome! Click a button:", telegram.SendOptions{
-                ReplyMarkup: telegram.ReplyInlineMarkup(
-                    telegram.Row(
-                        telegram.Data("👍 Like", "action_like"),
-                        telegram.Data("❤️ Love", "action_love"),
-                    ),
-                    telegram.Row(
-                        telegram.Data("ℹ️ Info", "action_info"),
-                    ),
-                ),
+                ReplyMarkup: keyboard,
             })
             c.Answer("Main menu")
         }
@@ -618,29 +617,6 @@ func main() {
     client.Idle()
 }
 ```
-
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card title="Always Answer" icon="check">
-    Always call Answer() to acknowledge callback, even if empty
-  </Card>
-  <Card title="Unique Data" icon="fingerprint">
-    Use unique callback data for different buttons
-  </Card>
-  <Card title="Data Format" icon="code">
-    Use consistent format for callback data (e.g., "action_param")
-  </Card>
-  <Card title="Check Permissions" icon="shield">
-    Verify user permissions for admin actions
-  </Card>
-  <Card title="Loading States" icon="spinner">
-    Show loading state for long operations
-  </Card>
-  <Card title="Error Handling" icon="triangle-exclamation">
-    Handle errors gracefully with alert messages
-  </Card>
-</CardGroup>
 
 ## Next Steps
 

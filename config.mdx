@@ -224,7 +224,7 @@ client, err := telegram.NewClient(telegram.ClientConfig{
 </ParamField>
 
 <ParamField path="NoPreconnect" type="bool" default="false">
-  Don't preconnect to the DC until `Connect()` is called. Otherwise it preconnects if string session is provided.
+  Don't connect to the telegram dc until `Connect()` is called. Otherwise it preconnects if string session is provided.
   
   ```go
   NoPreconnect: true

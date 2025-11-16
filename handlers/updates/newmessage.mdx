@@ -489,8 +489,11 @@ if err == nil {
 
 ```go Wait for Click
 // Send message with button and wait for click
+keyboard := telegram.NewKeyboard()
+keyboard.AddRow(telegram.Button.Data("Click me!", "click_data"))
+
 m.Reply("Click me!", telegram.SendOptions{
-    ReplyMarkup: telegram.ReplyInlineMarkup(...),
+    ReplyMarkup: keyboard,
 })
 
 callback, err := m.WaitClick()
@@ -583,29 +586,6 @@ client.On("cmd:start", func(m *telegram.NewMessage) error {
     return nil
 }, telegram.FilterPrivate)
 ```
-
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card title="Check for nil" icon="shield-check">
-    Always check if media/sender objects are nil before accessing
-  </Card>
-  <Card title="Handle errors" icon="triangle-exclamation">
-    Always handle errors from reply/respond methods
-  </Card>
-  <Card title="Use filters" icon="filter">
-    Filter messages early with FilterPrivate, FilterGroup, etc.
-  </Card>
-  <Card title="Conversations timeout" icon="clock">
-    Set appropriate timeouts for Ask() and Conv()
-  </Card>
-  <Card title="Download wisely" icon="download">
-    Check file size before downloading large files
-  </Card>
-  <Card title="Close conversations" icon="door-closed">
-    Always defer conv.Close() when using manual conversations
-  </Card>
-</CardGroup>
 
 ## Next Steps
 

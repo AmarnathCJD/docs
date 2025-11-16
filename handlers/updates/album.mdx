@@ -376,7 +376,7 @@ client.On("album", func(a *telegram.Album) error {
         if photo := msg.Photo(); photo != nil {
             // Estimate photo size from largest size
             if len(photo.Sizes) > 0 {
-                if size, ok := photo.Sizes[len(photo.Sizes)-1].(*PhotoSizeObj); ok {
+                if size, ok := photo.Sizes[len(photo.Sizes)-1].(*telegram.PhotoSizeObj); ok {
                     totalSize += int64(size.Size)
                 }
             }
@@ -504,29 +504,6 @@ func main() {
     client.Idle()
 }
 ```
-
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card title="Check Media Types" icon="image">
-    Always verify media types before processing
-  </Card>
-  <Card title="Size Validation" icon="scale-balanced">
-    Check total size before downloading albums
-  </Card>
-  <Card title="Error Handling" icon="triangle-exclamation">
-    Handle errors when downloading individual files
-  </Card>
-  <Card title="Use First Message" icon="arrow-pointer">
-    Reply/respond methods use the first message
-  </Card>
-  <Card title="Iterate Safely" icon="shield-check">
-    Check if Messages array is not empty
-  </Card>
-  <Card title="Preserve Order" icon="arrow-down-1-9">
-    Messages are pre-sorted by ID, preserve order when needed
-  </Card>
-</CardGroup>
 
 ## Next Steps
 

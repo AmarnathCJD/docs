@@ -3,6 +3,10 @@ title: "InlineQuery"
 description: "Handle inline queries and build inline results"
 ---
 
+<Note>
+  To receive inline queries, you need to enable inline mode for your bot. Go to [@BotFather](https://t.me/BotFather), select your bot, go to **Bot Settings** → **Inline Mode** and turn it on.
+</Note>
+
 ## Overview
 
 `InlineQuery` represents an inline query when users type `@yourbot query` in any chat. It allows bots to provide results that can be sent to any chat.
@@ -137,17 +141,16 @@ q.Answer(builder.Results())
   </Tab>
   <Tab title="With Options">
     ```go
+    keyboard := telegram.NewKeyboard()
+    keyboard.AddRow(telegram.Button.URL("Visit", "https://example.com"))
+    
     builder.Article(
         "Title", 
         "Description", 
         "Text",
         &telegram.ArticleOptions{
             ParseMode: "HTML",
-            ReplyMarkup: telegram.ReplyInlineMarkup(
-                telegram.Row(
-                    telegram.URL("Visit", "https://example.com"),
-                ),
-            ),
+            ReplyMarkup: keyboard,
             LinkPreview: false,
         },
     )
@@ -197,14 +200,15 @@ q.Answer(builder.Results())
   </Tab>
   <Tab title="With Buttons">
     ```go
+    keyboard := telegram.NewKeyboard()
+    keyboard.AddRow(
+        telegram.Button.URL("Open", "https://example.com"),
+        telegram.Button.Data("Like", "like"),
+    )
+    
     builder.Photo("photo.jpg", &telegram.ArticleOptions{
         Caption: "Click a button",
-        ReplyMarkup: telegram.ReplyInlineMarkup(
-            telegram.Row(
-                telegram.URL("Open", "https://example.com"),
-                telegram.Data("Like", "like"),
-            ),
-        ),
+        ReplyMarkup: keyboard,
     })
     ```
   </Tab>
@@ -444,14 +448,13 @@ client.On("inline", func(q *telegram.InlineQuery) error {
     }
     
     for i, img := range images {
+        keyboard := telegram.NewKeyboard()
+        keyboard.AddRow(telegram.Button.URL("View Full", img.URL))
+        
         builder.Photo(img.URL, &telegram.ArticleOptions{
             ID:      fmt.Sprintf("img_%d", i),
             Caption: img.Caption,
-            ReplyMarkup: telegram.ReplyInlineMarkup(
-                telegram.Row(
-                    telegram.URL("View Full", img.URL),
-                ),
-            ),
+            ReplyMarkup: keyboard,
         })
     }
     
@@ -553,6 +556,10 @@ client.On("inline", func(q *telegram.InlineQuery) error {
 ```
 
 ## InlineSend (Chosen Result)
+
+<Note>
+  To receive chosen inline result updates, you need to enable inline feedback for your bot. Go to [@BotFather](https://t.me/BotFather), select your bot, go to **Bot Settings** → **Inline Feedback** and set it to **100%**.
+</Note>
 
 ### Handle Chosen Results
 
@@ -681,29 +688,6 @@ func main() {
     client.Idle()
 }
 ```
-
-## Best Practices
-
-<CardGroup cols={2}>
-  <Card title="Fast Response" icon="bolt">
-    Answer queries quickly (< 1 second)
-  </Card>
-  <Card title="Relevant Results" icon="bullseye">
-    Show relevant results based on query
-  </Card>
-  <Card title="Use Pagination" icon="list">
-    Implement pagination for large result sets
-  </Card>
-  <Card title="Cache Wisely" icon="database">
-    Set appropriate cache times
-  </Card>
-  <Card title="Private Results" icon="lock">
-    Use private flag for user-specific data
-  </Card>
-  <Card title="Unique IDs" icon="fingerprint">
-    Use unique IDs for each result
-  </Card>
-</CardGroup>
 
 ## Next Steps
 

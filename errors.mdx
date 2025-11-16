@@ -1,0 +1,246 @@
+---
+title: "Handling Errors"
+description: "Learn how to handle errors effectively in Gogram"
+---
+
+## Overview
+
+Proper error handling is crucial for building reliable Telegram bots and clients. Gogram provides comprehensive error handling mechanisms.
+
+## Error Categories
+
+Telegram API errors are categorized by HTTP-like status codes:
+
+<CardGroup cols={2}>
+  <Card title="303 - SeeOther" icon="arrow-right">
+    Redirect to another data center or endpoint
+  </Card>
+  <Card title="400 - BadRequest" icon="circle-xmark">
+    Invalid request parameters or malformed data
+  </Card>
+  <Card title="401 - Unauthorized" icon="lock">
+    Authentication required or session expired
+  </Card>
+  <Card title="403 - Forbidden" icon="ban">
+    Access denied or insufficient permissions
+  </Card>
+  <Card title="406 - NotAcceptable" icon="triangle-exclamation">
+    Request not acceptable (e.g., duplicate message)
+  </Card>
+  <Card title="420 - Flood" icon="clock">
+    Too many requests, rate limiting active
+  </Card>
+  <Card title="500 - InternalServerError" icon="server">
+    Telegram server error, retry later
+  </Card>
+</CardGroup>
+
+### Common Error Examples
+
+<Tabs>
+  <Tab title="400 - BadRequest">
+    ```go
+    // PEER_ID_INVALID
+    _, err := client.SendMessage(invalid_id, "Hello")
+    if err != nil && strings.Contains(err.Error(), "PEER_ID_INVALID") {
+        fmt.Println("Invalid chat or user ID")
+    }
+    
+    // MESSAGE_TOO_LONG
+    _, err = client.SendMessage("me", veryLongText)
+    if err != nil && strings.Contains(err.Error(), "MESSAGE_TOO_LONG") {
+        fmt.Println("Message exceeds 4096 characters")
+    }
+    ```
+  </Tab>
+  <Tab title="401 - Unauthorized">
+    ```go
+    // AUTH_KEY_UNREGISTERED
+    err := client.Conn()
+    if err != nil && strings.Contains(err.Error(), "AUTH_KEY_UNREGISTERED") {
+        fmt.Println("Session expired, re-authentication required")
+        client.Login("+1234567890")
+    }
+    ```
+  </Tab>
+  <Tab title="403 - Forbidden">
+    ```go
+    // USER_IS_BLOCKED
+    _, err := client.SendMessage(userID, "Hello")
+    if err != nil && strings.Contains(err.Error(), "USER_IS_BLOCKED") {
+        fmt.Println("Bot was blocked by user")
+    }
+    
+    // CHAT_WRITE_FORBIDDEN
+    _, err = client.SendMessage(chatID, "Hello")
+    if err != nil && strings.Contains(err.Error(), "CHAT_WRITE_FORBIDDEN") {
+        fmt.Println("Cannot write to this chat")
+    }
+    ```
+  </Tab>
+  <Tab title="420 - Flood">
+    ```go
+    // FLOOD_WAIT_X (X = seconds to wait)
+    _, err := client.SendMessage("me", "Hello")
+    if err != nil && strings.Contains(err.Error(), "FLOOD_WAIT") {
+        // Extract wait time
+        var seconds int
+        fmt.Sscanf(err.Error(), "FLOOD_WAIT_%d", &seconds)
+        fmt.Printf("Rate limited, wait %d seconds\n", seconds)
+        time.Sleep(time.Duration(seconds) * time.Second)
+    }
+    ```
+  </Tab>
+  <Tab title="500 - Internal">
+    ```go
+    // INTERNAL_SERVER_ERROR
+    _, err := client.SendMessage("me", "Hello")
+    if err != nil && strings.Contains(err.Error(), "INTERNAL") {
+        fmt.Println("Telegram server error, retrying...")
+        time.Sleep(5 * time.Second)
+        // Retry the request
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Error Types
+
+### Connection Errors
+
+```go
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID: 6, AppHash: "app_hash",
+})
+if err != nil {
+    log.Fatalf("Failed to create client: %v", err)
+}
+
+err = client.Conn()
+if err != nil {
+    log.Fatalf("Failed to connect: %v", err)
+}
+```
+
+### Handling API Errors
+
+Every API call returns two values: the result and an error. Always check the error before using the result.
+
+```go
+user, err := client.GetMe()
+if err != nil {
+    log.Fatalf("API error: %v", err)
+}
+
+channel, err := client.ChannelsGetFullChannel("@somechannel")
+if err != nil {
+    log.Fatalf("API error: %v", err)
+}
+```
+
+## Error Handler
+
+The client config asks for a global error handler function that gets called for unhandled errors in event handlers.
+
+```go
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID: 6, AppHash: "app_hash",
+    ErrorHandler: func(err error) {
+        log.Printf("Global error: %v", err)
+    },
+})
+```
+
+## Handling Flood Waits
+
+Some API calls may return a `FLOOD_WAIT` error if you exceed rate limits. Implement retry logic with exponential backoff.
+
+The client config also allows setting a custom flood wait handler.
+
+```go
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID: 6, AppHash: "app_hash",
+    FloodHandler: func(err error) bool {
+        log.Printf("Flood wait error: %v", err)
+        // do the necessary wait here
+        return true // return true to retry the request
+        // return false to abort the request
+    }
+})
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Always Check Errors" icon="shield-check">
+    Never ignore errors - always check and handle them
+  </Card>
+  <Card title="Use Global Error Handler" icon="globe">
+    Implement a global error handler for unhandled errors
+  </Card>
+</CardGroup>
+
+## Complete Example
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+    "strings"
+    "time"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    client, err := telegram.NewClient(telegram.ClientConfig{
+        AppID: 6, AppHash: "app_hash",
+        ErrorHandler: func(err error) {
+            log.Printf("Global error: %v", err)
+        },
+        FloodHandler: func(err error) bool {
+            log.Printf("Flood wait error: %v", err)
+            return true
+        },
+    })
+    if err != nil {
+        log.Fatalf("Failed to create client: %v", err)
+    }
+
+    if err := client.Conn(); err != nil {
+        log.Fatalf("Connection failed: %v", err)
+    }
+
+    if err := client.LoginBot("bot_token"); err != nil {
+        log.Fatalf("Login failed: %v", err)
+    }
+
+    client.On("message", func(m *telegram.NewMessage) error {
+        if len(m.Text()) == 0 {
+            return fmt.Errorf("empty message")
+        }
+
+        return nil
+    })
+
+    client.Idle()
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Handling Updates" icon="bolt" href="/updates">
+    Learn about update handling
+  </Card>
+  <Card title="Configuration" icon="gear" href="/config">
+    Configure client settings
+  </Card>
+  <Card title="FAQ" icon="question" href="/faq">
+    Common questions and solutions
+  </Card>
+  <Card title="Examples" icon="code" href="/examples">
+    View complete examples
+  </Card>
+</CardGroup>

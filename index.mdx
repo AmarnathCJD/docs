@@ -22,8 +22,39 @@ description: "Modern, elegant MTProto API framework for Go"
 
 Please note that gogram requires **Go 1.18 or later** to support go-generics.
 
-```bash
-go get -u github.com/amarnathcjd/gogram/telegram
+<Tabs>
+  <Tab title="Latest Stable">
+    ```bash
+    go get -u github.com/amarnathcjd/gogram/telegram
+    ```
+  </Tab>
+  <Tab title="Master Branch">
+    ```bash
+    go get -u github.com/amarnathcjd/gogram/telegram@master
+    ```
+    Install the latest version from the master branch for newest features.
+  </Tab>
+  <Tab title="Dev Branch">
+    ```bash
+    go get -u github.com/amarnathcjd/gogram/telegram@dev
+    ```
+    Install from the development branch for experimental features (may be unstable).
+  </Tab>
+</Tabs>
+
+### Verify Installation
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    fmt.Println(telegram.Version, telegram.ApiVersion)
+}
 ```
 
 ## Quick Start
@@ -46,7 +77,7 @@ func main() {
         log.Fatal(err)
     }
 
-    client.Conn()
+    client.Conn() // important, establishes connection to Telegram servers
 
     // Login as bot or user
     client.LoginBot("<bot-token>") 

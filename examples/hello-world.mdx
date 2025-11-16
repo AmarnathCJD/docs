@@ -1,0 +1,60 @@
+---
+title: "Hello World"
+description: "Your first Gogram bot - send a simple message"
+---
+
+## Overview
+
+The simplest possible Gogram example - authenticate and send a message to yourself (Saved Messages).
+
+## Code
+
+```go
+package main
+
+import (
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+	// Create a new Telegram client with your API credentials
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:   6,                // Your API ID from my.telegram.org
+		AppHash: "YOUR_APP_HASH",  // Your API Hash from my.telegram.org
+	})
+	
+	// Authenticate as a bot using token from @BotFather
+	client.LoginBot("YOUR_BOT_TOKEN")
+	
+	// Send a message to yourself (Saved Messages)
+	// "me" is a special identifier for your own Saved Messages
+	client.SendMessage("me", "hello world!")
+}
+```
+
+## How It Works
+
+1. **Create Client** - Initialize a new Telegram client with your API credentials from [my.telegram.org](https://my.telegram.org)
+2. **Authenticate** - Login as a bot using the token you got from [@BotFather](https://t.me/BotFather)
+3. **Send Message** - Send "hello world!" to your Saved Messages (use `"me"` as the chat identifier)
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` with your actual API hash
+2. Replace `YOUR_BOT_TOKEN` with your bot token from @BotFather
+3. Run the program:
+   ```bash
+   go run main.go
+   ```
+4. Check your Saved Messages in Telegram to see "hello world!"
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Echo Bot" icon="repeat" href="/examples/echo-bot">
+    Build a bot that responds to messages
+  </Card>
+  <Card title="Authentication" icon="key" href="/auth">
+    Learn more about authentication
+  </Card>
+</CardGroup>

@@ -1,0 +1,157 @@
+---
+title: "Get History"
+description: "Fetch message history from chats"
+---
+
+## Overview
+
+Retrieve message history from any chat, channel, or group. This example shows how to fetch the last few messages.
+
+## Code
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+	// Create and authenticate the client
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:   6,
+		AppHash: "YOUR_APP_HASH",
+	})
+	
+	// Login as user (required to access chat history)
+	client.Login("+1234567890")
+	
+	// Get last 5 messages from a chat
+	// Can use username (@username), chat ID, or "me" for saved messages
+	messages, _ := client.GetHistory("@username", &telegram.HistoryOption{
+		Limit: 5, // Number of messages to retrieve
+	})
+	
+	// Alternative: client.IterHistory() for yielding messages one by one
+	// Useful for large histories to avoid memory issues
+	
+	// Print each message's text
+	for _, message := range messages {
+		fmt.Println(message.Text())
+	}
+
+	client.Idle()
+}
+```
+
+## How It Works
+
+1. **User Authentication** - Login as a user account (bots have limited history access)
+2. **GetHistory** - Fetch messages from a specific chat using username or ID
+3. **Limit Messages** - `Limit: 5` retrieves only the last 5 messages
+4. **Iterate Results** - Loop through messages and print their text content
+
+## History Options
+
+```go
+messages, _ := client.GetHistory("@username", &telegram.HistoryOption{
+	Limit:    100,           // Maximum number of messages to retrieve
+	Offset: 0,               // Start from specific message ID
+    OffsetDate: 0,           // Start from specific date (Unix timestamp)
+	MinID:    0,             // Only messages with ID > MinID
+	MaxID:    0,             // Only messages with ID < MaxID
+	SleepThresholdMs: 0,     // Sleep time between requests in milliseconds
+})
+```
+
+## Alternative: Iterate History
+
+For large histories, use `IterHistory` to process messages one by one:
+
+```go
+// Process messages one by one without loading all into memory
+messagesChan, errChan := client.IterHistory("@username")
+for {
+    select {
+    case message, ok := <-messagesChan:
+        if !ok {
+            messagesChan = nil
+        } else {
+            // Process each message
+            fmt.Println(message.(*telegram.MessageObj).Text())
+        }
+    case err, ok := <-errChan:
+        if !ok {
+            errChan = nil
+        } else {
+            fmt.Println("Error:", err)
+        }
+    }
+    if messagesChan == nil && errChan == nil {
+        break
+    }
+}
+```
+
+## Practical Examples
+
+### Get Messages with Media Only
+
+```go
+messages, _ := client.GetHistory("@channel", &telegram.HistoryOption{
+	Limit: 50,
+})
+
+for _, message := range messages {
+	// Check if message contains media
+	if message.IsMedia() {
+		fmt.Printf("Media message ID: %d\n", message.ID)
+		// Download the media
+		message.Download()
+	}
+}
+```
+
+### Get Messages in Date Range
+
+```go
+// Get messages from specific time period
+messages, _ := client.GetHistory("@chat", &telegram.HistoryOption{
+	Limit:     100,
+	OffsetDate: 1640000000, // Unix timestamp
+})
+
+for _, message := range messages {
+	fmt.Printf("[%d] %s\n", message.Date(), message.Text())
+}
+```
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` with your API hash
+2. Replace `+1234567890` with your phone number
+3. Replace `@username` with the target chat username or ID
+4. Run the program:
+   ```bash
+   go run main.go
+   ```
+5. You'll see the last 5 messages from that chat printed
+
+## Important Notes
+
+- **User Account Required** - Full history access requires user authentication (not bot)
+- **Rate Limits** - Be mindful of Telegram's rate limits when fetching large histories
+- **Permissions** - Ensure you have access to the chat/channel you're querying
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Get Chat Members" icon="users" href="/examples/get-chat-members">
+    List members in a group or channel
+  </Card>
+  <Card title="Get Dialogs" icon="comments" href="/examples/get-dialogs">
+    Get all your chats
+  </Card>
+</CardGroup>

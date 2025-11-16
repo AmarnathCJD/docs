@@ -1,0 +1,127 @@
+---
+title: "Welcome Bot"
+description: "Welcome new members to your group"
+---
+
+## Overview
+
+A bot that automatically welcomes new members when they join a group or channel.
+
+## Code
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+	// Create and authenticate the client
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:   6,
+		AppHash: "YOUR_APP_HASH",
+	})
+	client.LoginBot("YOUR_BOT_TOKEN")
+
+	// Listen for participant updates (joins/leaves)
+	client.On("participant", UserJoinHandle)
+
+	// Handle /start command
+	client.On("cmd:start", func(message *telegram.NewMessage) error {
+		message.Reply("Hello, I am a bot!")
+		return nil
+	})
+	
+	// Keep the bot running
+	client.Idle()
+}
+
+// Handle user join events
+func UserJoinHandle(m *telegram.ParticipantUpdate) error {
+	// Check if user joined or was added to the group
+	if m.IsJoined() || m.IsAdded() {
+		// Send welcome message with user's first name
+		// m.ChannelID() returns the chat/group ID where user joined
+		// m.User contains the user information
+		fmt.Println(m.Client.SendMessage(
+			m.ChannelID(), 
+			"Welcome to the group <b>"+m.User.FirstName+"!</b>",
+		))
+	}
+
+	return nil
+}
+```
+
+## How It Works
+
+1. **Participant Event** - The `"participant"` event fires when someone joins, leaves, or is added to a group
+2. **Check Join Type** - `m.IsJoined()` checks if user joined voluntarily, `m.IsAdded()` checks if user was added by admin
+3. **Get User Info** - `m.User.FirstName` gets the first name of the user who joined
+4. **Send Welcome** - Send a formatted welcome message to the group using `m.ChannelID()`
+5. **HTML Formatting** - Use `<b>` tags for bold text in the welcome message
+
+## ParticipantUpdate Methods
+
+- **`m.IsJoined()`** - Returns true if user joined via invite link
+- **`m.IsAdded()`** - Returns true if user was added by an admin
+- **`m.IsLeft()`** - Returns true if user left the group
+- **`m.IsKicked()`** - Returns true if user was removed/banned
+- **`m.IsBanned()`** - Returns true if user is banned from the group
+- **`m.ChannelID()`** - Returns the group/channel ID
+- **`m.User`** - Contains user information (FirstName, Username, etc.)
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` with your API hash
+2. Replace `YOUR_BOT_TOKEN` with your bot token from @BotFather
+3. Add your bot to a group as admin
+4. Run the program:
+   ```bash
+   go run main.go
+   ```
+5. When someone joins the group, they'll see a welcome message!
+
+## Customization Ideas
+
+```go
+// Welcome with username mention
+func UserJoinHandle(m *telegram.ParticipantUpdate) error {
+	if m.IsJoined() || m.IsAdded() {
+		welcomeMsg := fmt.Sprintf(
+			"👋 Welcome to the group, <a href='tg://user?id=%d'>%s</a>!\n\n"+
+			"Please read the group rules and enjoy your stay!",
+			m.User.ID,
+			m.User.FirstName,
+		)
+		m.Client.SendMessage(m.ChannelID(), welcomeMsg)
+	}
+	return nil
+}
+```
+
+```go
+// Handle user leaving
+func UserJoinHandle(m *telegram.ParticipantUpdate) error {
+	if m.IsJoined() || m.IsAdded() {
+		m.Client.SendMessage(m.ChannelID(), "Welcome "+m.User.FirstName+"! 👋")
+	} else if m.IsLeft() {
+		m.Client.SendMessage(m.ChannelID(), m.User.FirstName+" left the group 😢")
+	}
+	return nil
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Get Chat Members" icon="users" href="/examples/get-chat-members">
+    List all members in a group
+  </Card>
+  <Card title="Participant Updates" icon="user-plus" href="/handlers/updates">
+    Learn more about participant updates
+  </Card>
+</CardGroup>

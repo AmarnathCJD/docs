@@ -1,0 +1,548 @@
+---
+title: "Invoking Methods"
+description: "Learn how to make API calls with Gogram"
+---
+
+## Overview
+
+At this point, we have successfully installed and authenticated Gogram. Now let's learn how to make API calls and interact with Telegram.
+
+## Basic Usage
+
+Making API calls with Gogram is simple and straightforward. Once you have an authenticated client, you can call any Telegram API method directly.
+
+### Simple Example
+
+```go
+package main
+
+import (
+    "log"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    client, _ := telegram.NewClient(telegram.ClientConfig{
+        AppID:   6,
+        AppHash: "your_app_hash",
+    })
+    
+    client.Conn()
+    client.LoginBot("your_bot_token")
+    
+    // Send a message to yourself
+    client.SendMessage("me", "Hello from Gogram!")
+    
+    client.Idle()
+}
+```
+
+## Step-by-Step Explanation
+
+Let's break down what's happening in the example above:
+
+### 1. Create Client
+
+```go
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+})
+```
+
+Creates a new Telegram client with your API credentials.
+
+### 2. Connect
+
+```go
+client.Conn()
+```
+
+Establishes a connection to Telegram's servers. This is required before authentication.
+
+### 3. Authenticate
+
+```go
+client.LoginBot("your_bot_token")
+```
+
+Authenticates with Telegram as a bot. You can also use `client.Login()` for user accounts.
+
+### 4. Make API Calls
+
+```go
+client.SendMessage("me", "Hello from Gogram!")
+```
+
+Sends a message using the Telegram API. The first parameter is the recipient (chat ID, username, or "me" for saved messages), and the second is the message text.
+
+### 5. Keep Running
+
+```go
+client.Idle()
+```
+
+Keeps the client running and listening for updates. Without this, the program would exit immediately.
+
+## Common API Methods
+
+### Sending Messages
+
+<Tabs>
+  <Tab title="Simple Text">
+    ```go
+    // Send to user by username
+    client.SendMessage("@username", "Hello!")
+    
+    // Send to chat by ID
+    client.SendMessage(123456789, "Hello!")
+    
+    // Send to yourself (Saved Messages)
+    client.SendMessage("me", "Hello!")
+    ```
+  </Tab>
+  <Tab title="With Formatting">
+    ```go
+    client.SendMessage("me", "<b>Bold</b> and <i>italic</i>", &telegram.SendOptions{
+        ParseMode: "HTML",
+    })
+    
+    client.SendMessage("me", "*Bold* and _italic_", &telegram.SendOptions{
+        ParseMode: "Markdown",
+    })
+    ```
+  </Tab>
+  <Tab title="With Buttons">
+    ```go
+    keyboard := telegram.NewKeyboard()
+    keyboard.AddRow(
+        telegram.Button.Data("Button 1", "data1"),
+        telegram.Button.Data("Button 2", "data2"),
+    )
+    
+    client.SendMessage("me", "Choose an option:", &telegram.SendOptions{
+        ReplyMarkup: keyboard,
+    })
+    ```
+  </Tab>
+</Tabs>
+
+### Sending Media
+
+<Tabs>
+  <Tab title="Photo">
+    ```go
+    // From file
+    client.SendMedia("me", "photo.jpg", &telegram.MediaOptions{
+        Caption: "Check out this photo!",
+    })
+    
+    // From URL
+    client.SendMedia("me", "https://example.com/photo.jpg")
+    ```
+  </Tab>
+  <Tab title="Video">
+    ```go
+    client.SendMedia("me", "video.mp4", &telegram.MediaOptions{
+        Caption: "Amazing video!",
+        Thumb: "thumbnail.jpg",
+    })
+    ```
+  </Tab>
+  <Tab title="Document">
+    ```go
+    client.SendMedia("me", "document.pdf", &telegram.MediaOptions{
+        Caption: "Important document",
+        ForceDocument: true,
+    })
+    ```
+  </Tab>
+  <Tab title="Album">
+    ```go
+    client.SendAlbum("me", "photo1.jpg", "photo2.jpg", "photo3.jpg")
+    ```
+  </Tab>
+</Tabs>
+
+### Getting Information
+
+<CodeGroup>
+
+```go Get User Info
+// Get your own info
+me, err := client.GetMe()
+fmt.Printf("Username: @%s\n", me.Username)
+
+// Get another user's info
+user, err := client.GetUser("@username")
+fmt.Printf("Name: %s %s\n", user.FirstName, user.LastName)
+```
+
+```go Get Chat Info
+// Get chat information
+chat, err := client.GetChat(-1001234567890)
+fmt.Printf("Chat title: %s\n", chat.Title)
+
+// Get channel info
+channel, err := client.GetChannel("@channelname")
+fmt.Printf("Subscribers: %d\n", channel.ParticipantsCount)
+```
+
+```go Get Messages
+// Get messages from a chat
+messages, err := client.GetMessages("me", &telegram.SearchOptions{
+    Limit: 10,
+})
+
+for _, msg := range messages {
+    fmt.Println(msg.Text)
+}
+```
+
+</CodeGroup>
+
+## Complex Examples
+
+### Download and Process Media
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    client, _ := telegram.NewClient(telegram.ClientConfig{
+        AppID: 6, AppHash: "app_hash",
+    })
+    
+    client.Conn()
+    client.LoginBot("bot_token")
+    
+    client.On("message", func(m *telegram.NewMessage) error {
+        if m.IsMedia() {
+            // Download media
+            path, err := m.Download(&telegram.DownloadOptions{
+                Output: "downloads/",
+                ProgressCallback: func(current, total int64) {
+                    percent := float64(current) / float64(total) * 100
+                    fmt.Printf("Downloading: %.2f%%\r", percent)
+                },
+            })
+            
+            if err != nil {
+                m.Reply("Failed to download: " + err.Error())
+                return err
+            }
+            
+            m.Reply("Downloaded to: " + path)
+        }
+        return nil
+    })
+    
+    client.Idle()
+}
+```
+
+### Forward Messages Between Chats
+
+```go
+// Forward a single message
+client.Forward("@topeer", "@frompeer", messageIDs)
+```
+
+### Edit and Delete Messages
+
+```go
+// Send a message
+msg, err := client.SendMessage("me", "Original text")
+
+// Edit the message
+client.EditMessage("me", msg.ID, "Updated text")
+
+// Delete the message
+client.DeleteMessages("me", []int32{msg.ID})
+```
+
+### Search Messages
+
+```go
+// Search for messages in a chat
+messages, err := client.SearchMessages("@channel", "search query", &telegram.SearchOptions{
+    Limit: 50,
+    Filter: telegram.FilterPhoto, // Only photos
+})
+
+for _, msg := range messages {
+    fmt.Printf("Found message: %d\n", msg.ID)
+}
+```
+
+## Goroutine Safety
+
+Gogram is **goroutine-safe**, meaning you can safely use the same client instance across multiple goroutines. This is perfect for handling concurrent operations.
+
+### Example: Concurrent API Calls
+
+```go
+package main
+
+import (
+    "fmt"
+    "sync"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    client, _ := telegram.NewClient(telegram.ClientConfig{
+        AppID: 6, AppHash: "app_hash",
+    })
+    
+    client.Conn()
+    client.LoginBot("bot_token")
+    
+    var wg sync.WaitGroup
+    
+    // Send messages to multiple chats concurrently
+    chats := []string{"@chat1", "@chat2", "@chat3", "@chat4", "@chat5"}
+    
+    for i, chat := range chats {
+        wg.Add(1)
+        go func(chatID string, index int) {
+            defer wg.Done()
+            
+            message := fmt.Sprintf("Message #%d from goroutine", index)
+            _, err := client.SendMessage(chatID, message)
+            
+            if err != nil {
+                fmt.Printf("Error sending to %s: %v\n", chatID, err)
+            } else {
+                fmt.Printf("Sent to %s successfully\n", chatID)
+            }
+        }(chat, i+1)
+    }
+    
+    wg.Wait()
+    fmt.Println("All messages sent!")
+}
+```
+
+### Example: Parallel Media Downloads
+
+```go
+package main
+
+import (
+    "fmt"
+    "sync"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    client, _ := telegram.NewClient(telegram.ClientConfig{
+        AppID: 6, AppHash: "app_hash",
+    })
+    
+    client.Conn()
+    client.Login("phone_number")
+    
+    // Get media messages from a chat
+    messages, _ := client.GetMessages("@channel", &telegram.SearchOptions{
+        Limit: 10,
+        Filter: telegram.FilterPhoto,
+    })
+    
+    var wg sync.WaitGroup
+    
+    // Download all photos concurrently
+    for i, msg := range messages {
+        wg.Add(1)
+        go func(m *telegram.MessageObj, index int) {
+            defer wg.Done()
+            
+            path, err := client.DownloadMedia(m, &telegram.DownloadOptions{
+                Output: fmt.Sprintf("downloads/photo_%d.jpg", index),
+            })
+            
+            if err != nil {
+                fmt.Printf("Download %d failed: %v\n", index, err)
+            } else {
+                fmt.Printf("Downloaded %d to %s\n", index, path)
+            }
+        }(msg, i+1)
+    }
+    
+    wg.Wait()
+    fmt.Println("All downloads complete!")
+}
+```
+
+### Example: Concurrent Event Handlers
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    client, _ := telegram.NewClient(telegram.ClientConfig{
+        AppID: 6, AppHash: "app_hash",
+    })
+    
+    client.Conn()
+    client.LoginBot("bot_token")
+    
+    // Each handler runs in its own goroutine automatically
+    client.On("message", func(m *telegram.NewMessage) error {
+        // Process message - runs concurrently for each message
+        go processMessage(m)
+        return nil
+    })
+    
+    client.On("callback", func(c *telegram.CallbackQuery) error {
+        // Process callback - runs concurrently for each callback
+        go processCallback(c)
+        return nil
+    })
+    
+    client.Idle()
+}
+
+func processMessage(m *telegram.NewMessage) {
+    // This runs in a separate goroutine
+    // Safe to do blocking operations here
+    fmt.Printf("Processing message from %d\n", m.SenderID)
+    
+    // Simulate heavy processing
+    result := doHeavyWork(m.Text())
+    
+    // Send response using the same client instance
+    m.Reply(result)
+}
+
+func processCallback(c *telegram.CallbackQuery) {
+    // Also runs in a separate goroutine
+    fmt.Printf("Processing callback: %s\n", c.DataString())
+    c.Answer("Processing...")
+}
+```
+
+## Error Handling
+
+Always check for errors when making API calls:
+
+```go
+msg, err := client.SendMessage("me", "Hello!")
+if err != nil {
+    if strings.Contains(err.Error(), "PEER_ID_INVALID") {
+        fmt.Println("Invalid chat ID")
+    } else if strings.Contains(err.Error(), "FLOOD_WAIT") {
+        fmt.Println("Rate limited, wait before retrying")
+    } else {
+        fmt.Printf("Error: %v\n", err)
+    }
+    return
+}
+
+fmt.Printf("Message sent! ID: %d\n", msg.ID)
+```
+
+## Raw Telegram API
+
+The entire raw Telegram API is available as functions on the client type for ease of use. Every method from the [Telegram API documentation](https://core.telegram.org/methods) can be called directly.
+
+### Examples of Raw API Calls
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    client, _ := telegram.NewClient(telegram.ClientConfig{
+        AppID: 6, AppHash: "app_hash",
+    })
+    
+    client.Conn()
+    client.LoginBot("bot_token")
+    
+    // 1. messages.getDialogs - Get user's chats
+    dialogs, err := client.MessagesGetDialogs(&telegram.MessagesGetDialogsParams{
+        Limit: 20,
+    })
+    if err == nil {
+        fmt.Printf("Found %d dialogs\n", len(dialogs.Dialogs))
+    }
+    
+    // 2. users.getFullUser - Get detailed user information
+    fullUser, err := client.UsersGetFullUser(&telegram.InputUserSelf{})
+    if err == nil {
+        fmt.Printf("User bio: %s\n", fullUser.FullUser.About)
+    }
+    
+    // 3. channels.getParticipants - Get channel members
+    participants, err := client.ChannelsGetParticipants(&telegram.ChannelsGetParticipantsParams{
+        Channel: &telegram.InputChannel{
+            ChannelID:  123456789,
+            AccessHash: 0, // Get from channel object
+        },
+        Filter: &telegram.ChannelParticipantsRecent{},
+        Limit:  100,
+    })
+    if err == nil {
+        fmt.Printf("Channel has %d participants\n", participants.Count)
+    }
+}
+```
+
+<Note>
+  All Telegram API methods follow the format `Category.MethodName` (e.g., `messages.sendMessage`, `users.getFullUser`, `channels.getParticipants`) and are available as `client.CategoryMethodName()` in Gogram.
+</Note>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Check Errors" icon="shield-check">
+    Always check and handle errors from API calls
+  </Card>
+  <Card title="Use Goroutines" icon="rocket">
+    Leverage goroutines for concurrent operations
+  </Card>
+  <Card title="Rate Limiting" icon="gauge">
+    Be mindful of Telegram's rate limits
+  </Card>
+  <Card title="Reuse Client" icon="recycle">
+    Use one client instance across your application
+  </Card>
+  <Card title="Context Timeout" icon="clock">
+    Set appropriate timeouts for operations
+  </Card>
+  <Card title="Validate Input" icon="check">
+    Validate chat IDs and parameters before calling
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Handling Updates" icon="bolt" href="/handlers">
+    Learn how to handle incoming updates
+  </Card>
+  <Card title="Update Types" icon="list" href="/handlers/updates">
+    Explore different update types
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/errors">
+    Handle errors effectively
+  </Card>
+  <Card title="Examples" icon="code" href="/examples">
+    View complete examples
+  </Card>
+</CardGroup>

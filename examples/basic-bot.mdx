@@ -1,0 +1,324 @@
+---
+title: "Basic Bot Example"
+description: "Create a simple Telegram bot with commands and buttons"
+---
+
+## Overview
+
+This example demonstrates how to create a basic Telegram bot with command handling, text messages, and inline buttons.
+
+## Complete Code
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+    "strings"
+    
+    "github.com/amarnathcjd/gogram/telegram"
+    "github.com/amarnathcjd/gogram/telegram/filters"
+)
+
+func main() {
+    // Create client
+    client, err := telegram.NewClient(telegram.ClientConfig{
+        AppID:   6,
+        AppHash: "your_app_hash",
+    })
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    // Connect to Telegram
+    if err := client.Conn(); err != nil {
+        log.Fatal(err)
+    }
+    
+    // Login as bot
+    if err := client.LoginBot("your_bot_token"); err != nil {
+        log.Fatal(err)
+    }
+    
+    log.Println("Bot started successfully!")
+    
+    // Start command
+    client.On("message", handleStart, filters.Command("start"))
+    
+    // Help command
+    client.On("message", handleHelp, filters.Command("help"))
+    
+    // Echo command
+    client.On("message", handleEcho, filters.Command("echo"))
+    
+    // Menu command
+    client.On("message", handleMenu, filters.Command("menu"))
+    
+    // Handle callbacks
+    client.On("callback", handleCallback)
+    
+    // Handle all other messages
+    client.On("message", handleMessage)
+    
+    // Keep bot running
+    client.Idle()
+}
+
+func handleStart(m *telegram.NewMessage) error {
+    welcome := `👋 Welcome to Basic Bot!
+
+I'm a simple bot that demonstrates Gogram features.
+
+Use /help to see available commands.`
+    
+    keyboard := telegram.NewKeyboard()
+    keyboard.AddRow(
+        telegram.Button.Data("📚 Help", "help"),
+        telegram.Button.Data("ℹ️ About", "about"),
+    )
+    
+    return m.Reply(welcome, telegram.ReplyOptions{
+        ReplyMarkup: keyboard,
+    })
+}
+
+func handleHelp(m *telegram.NewMessage) error {
+    help := `📚 Available Commands:
+
+/start - Start the bot
+/help - Show this help message
+/echo <text> - Echo your message
+/menu - Show button menu
+
+Just send me any message and I'll echo it back!`
+    
+    return m.Reply(help)
+}
+
+func handleEcho(m *telegram.NewMessage) error {
+    args := m.Args()
+    
+    if args == "" {
+        return m.Reply("Usage: /echo <text>")
+    }
+    
+    return m.Reply("🔊 You said: " + args)
+}
+
+func handleMenu(m *telegram.NewMessage) error {
+    keyboard := telegram.NewKeyboard()
+    keyboard.AddRow(
+        telegram.Button.Data("🎲 Random", "random"),
+        telegram.Button.Data("📊 Stats", "stats"),
+    )
+    keyboard.AddRow(
+        telegram.Button.Data("⚙️ Settings", "settings"),
+        telegram.Button.Data("❓ Help", "help"),
+    )
+    keyboard.AddRow(
+        telegram.Button.URL("🌐 Visit Website", "https://github.com/amarnathcjd/gogram"),
+    )
+    
+    return m.Reply("Choose an option:", telegram.ReplyOptions{
+        ReplyMarkup: keyboard,
+    })
+}
+
+func handleCallback(c *telegram.CallbackQuery) error {
+    data := c.DataString()
+    
+    var response string
+    
+    switch data {
+    case "help":
+        response = `📚 Help Menu
+
+Use the commands to interact with the bot.
+Type /help to see all commands.`
+        
+    case "about":
+        response = `ℹ️ About This Bot
+
+Built with Gogram - A modern MTProto framework for Go.
+GitHub: github.com/amarnathcjd/gogram`
+        
+    case "random":
+        response = fmt.Sprintf("🎲 Your random number: %d", 1+len(data)*7%100)
+        
+    case "stats":
+        response = `📊 Bot Statistics
+
+Messages: 1,234
+Users: 567
+Uptime: 24h`
+        
+    case "settings":
+        response = `⚙️ Settings
+
+Language: English
+Notifications: On
+Theme: Default`
+        
+    default:
+        response = "Unknown option: " + data
+    }
+    
+    // Answer the callback
+    c.Answer("✅ " + strings.Title(data))
+    
+    // Edit the message
+    keyboard := telegram.NewKeyboard()
+    keyboard.AddRow(telegram.Button.Data("« Back", "menu"))
+    
+    return c.Edit(response, telegram.EditOptions{
+        ReplyMarkup: keyboard,
+    })
+}
+
+func handleMessage(m *telegram.NewMessage) error {
+    // Echo any text message
+    if text := m.Text(); text != "" {
+        return m.Reply("💬 " + text)
+    }
+    
+    // Handle media
+    if m.IsMedia() {
+        mediaType := "media"
+        
+        if m.Photo() != nil {
+            mediaType = "photo"
+        } else if m.Video() != nil {
+            mediaType = "video"
+        } else if m.Document() != nil {
+            mediaType = "document"
+        } else if m.Sticker() != nil {
+            mediaType = "sticker"
+        }
+        
+        return m.Reply(fmt.Sprintf("📎 Received a %s!", mediaType))
+    }
+    
+    return nil
+}
+```
+
+## Features Demonstrated
+
+<CardGroup cols={2}>
+  <Card title="Command Handling" icon="terminal">
+    Multiple commands with different handlers
+  </Card>
+  <Card title="Inline Buttons" icon="mouse-pointer">
+    Interactive button menus
+  </Card>
+  <Card title="Callback Queries" icon="hand-pointer">
+    Handle button clicks with answers
+  </Card>
+  <Card title="Message Editing" icon="pen">
+    Edit messages dynamically
+  </Card>
+  <Card title="Text Processing" icon="text">
+    Echo and process text messages
+  </Card>
+  <Card title="Media Detection" icon="photo-film">
+    Detect different media types
+  </Card>
+</CardGroup>
+
+## Running the Bot
+
+1. **Get API credentials** from [my.telegram.org](https://my.telegram.org)
+2. **Create a bot** with [@BotFather](https://t.me/BotFather)
+3. **Replace credentials** in the code:
+   ```go
+   AppID:   6,              // Your API ID
+   AppHash: "your_app_hash", // Your API Hash
+   ```
+4. **Replace bot token**:
+   ```go
+   client.LoginBot("your_bot_token")
+   ```
+5. **Run the bot**:
+   ```bash
+   go run main.go
+   ```
+
+## Testing the Bot
+
+1. Start a chat with your bot
+2. Send `/start` to see the welcome message
+3. Try different commands: `/help`, `/echo hello`, `/menu`
+4. Click the inline buttons
+5. Send regular messages to see echo responses
+
+## Customization Ideas
+
+<Tabs>
+  <Tab title="Add More Commands">
+    ```go
+    client.On("message", func(m *telegram.NewMessage) error {
+        m.Reply("Current time: " + time.Now().Format("15:04:05"))
+        return nil
+    }, filters.Command("time"))
+    ```
+  </Tab>
+  <Tab title="Add Filters">
+    ```go
+    // Only respond in private chats
+    client.On("message", handleMessage, filters.Private)
+    
+    // Only respond to admin
+    adminFilter := filters.FilterFunc(func(m *telegram.NewMessage) bool {
+        return m.SenderID == 123456789
+    })
+    client.On("message", adminCommand, adminFilter)
+    ```
+  </Tab>
+  <Tab title="Database Integration">
+    ```go
+    var userCount int
+    
+    client.On("message", func(m *telegram.NewMessage) error {
+        // Check if new user
+        if isNewUser(m.SenderID) {
+            userCount++
+            saveUser(m.SenderID)
+        }
+        return nil
+    }, filters.Command("start"))
+    ```
+  </Tab>
+  <Tab title="Error Handling">
+    ```go
+    client.On("error", func(err error) {
+        log.Printf("Handler error: %v", err)
+    })
+    
+    client.On("message", func(m *telegram.NewMessage) error {
+        if err := processMessage(m); err != nil {
+            m.Reply("⚠️ An error occurred")
+            return err
+        }
+        return nil
+    })
+    ```
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Media Bot" icon="photo-film" href="/examples/media-bot">
+    Handle photos and videos
+  </Card>
+  <Card title="Conversation Bot" icon="comments" href="/examples/conversation-bot">
+    Build multi-step conversations
+  </Card>
+  <Card title="Filters" icon="filter" href="/handlers/filters">
+    Learn about filters
+  </Card>
+  <Card title="Handlers" icon="bolt" href="/handlers">
+    Explore event handlers
+  </Card>
+</CardGroup>

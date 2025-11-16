@@ -1,0 +1,81 @@
+---
+title: "Echo Bot"
+description: "Bot that repeats everything you send"
+---
+
+## Overview
+
+A simple bot that echoes back any message it receives in private chats, plus responds to the `/start` command.
+
+## Code
+
+```go
+package main
+
+import (
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+	// Create and authenticate the client
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:   6,
+		AppHash: "YOUR_APP_HASH",
+	})
+	client.LoginBot("YOUR_BOT_TOKEN")
+
+	// Handle all private messages - echo them back
+	client.On(telegram.OnMessage, func(message *telegram.NewMessage) error {
+		// Respond with the same message (echo)
+		message.Respond(message)
+		return nil
+	}, telegram.FilterPrivate) // Only respond to private messages
+
+	// Handle /start command specifically
+	client.On("cmd:start", func(message *telegram.NewMessage) error {
+		// Reply with a greeting
+		message.Reply("Hello, I am a bot!")
+		return nil
+	})
+	
+	// Keep the bot running
+	client.Idle()
+}
+```
+
+## How It Works
+
+1. **Create & Authenticate** - Set up the client and login as a bot
+2. **Private Message Handler** - Listen for all messages in private chats using `telegram.OnMessage` event
+3. **Echo Response** - Use `message.Respond(message)` to send back the same message
+4. **Filter Private** - `telegram.FilterPrivate` ensures the bot only echoes in private chats, not groups
+5. **Start Command** - Special handler for `/start` command that sends a greeting
+6. **Keep Running** - `client.Idle()` keeps the bot alive and listening for updates
+
+## Key Differences
+
+- **`message.Reply()`** - Replies to the original message (shows "in reply to")
+- **`message.Respond()`** - Sends a new message without replying
+- **Event Pattern** - `cmd:start"` is a shorthand for handling the `/start` command
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` with your API hash
+2. Replace `YOUR_BOT_TOKEN` with your bot token from @BotFather
+3. Run the program:
+   ```bash
+   go run main.go
+   ```
+4. Send any message to your bot in private chat - it will echo it back!
+5. Try `/start` to see the greeting message
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Welcome Bot" icon="user-plus" href="/examples/welcome-bot">
+    Welcome new members to groups
+  </Card>
+  <Card title="Event Handlers" icon="bolt" href="/handlers">
+    Learn more about handling updates
+  </Card>
+</CardGroup>

@@ -1,15 +1,17 @@
 ---
-title: "Event Handlers"
+title: "Handling Updates"
 description: "Handle incoming updates with Gogram's event system"
 ---
 
 ## Overview
 
-Gogram provides a powerful event handling system to process incoming updates like messages, callbacks, and more. The recommended way to add handlers is using the `client.On()` method.
+Gogram provides a powerful event-driven architecture to handle updates from Telegram. You can listen to various event types and respond to them using handler functions. The recommended way to add handlers is using the `client.On()` method.
 
 ## Basic Usage
 
 ### Handling Messages
+
+Handle [NewMessage](/handlers/updates/newmessage) updates:
 
 ```go
 client.On("message", func(m *telegram.NewMessage) error {
@@ -35,9 +37,11 @@ client.On("cmd:admin", func(m *telegram.NewMessage) error {
 
 ### Handling Callbacks
 
+Handle [CallbackQuery](/handlers/updates/callback) updates from inline button clicks:
+
 ```go
 client.On("callback", func(c *telegram.CallbackQuery) error {
-    c.Answer("Button clicked!", &telegram.AnswerCallbackQueryParams{
+    c.Answer("Button clicked!", &telegram.CallbackOptions{
         Alert: true,
     })
     return nil
@@ -46,24 +50,226 @@ client.On("callback", func(c *telegram.CallbackQuery) error {
 
 ### Handling Inline Queries
 
+Handle [InlineQuery](/handlers/updates/inline) updates when users type `@yourbot query`:
+
 ```go
 client.On("inline", func(q *telegram.InlineQuery) error {
-    results := []telegram.InputBotInlineResult{
-        &telegram.InputBotInlineResultObj{
-            ID:    "1",
-            Type:  "article",
-            Title: "Example Result",
-            // ... more fields
-        },
-    }
-    q.Answer(results)
+    builder := q.Builder()
+    builder.Article("Result", "Description", "Text")
+    q.Answer(builder.Results())
     return nil
 })
 ```
 
 ## Event Types
 
-### Available Events
+### Message Updates
+
+<CardGroup cols={2}>
+  <Card title="NewMessage" icon="message" href="/handlers/updates/newmessage">
+    New incoming messages
+  </Card>
+  <Card title="EditMessage" icon="pen">
+    Edited messages
+  </Card>
+  <Card title="DeleteMessage" icon="trash">
+    Deleted messages
+  </Card>
+  <Card title="Album" icon="images" href="/handlers/updates/album">
+    Media groups/albums
+  </Card>
+</CardGroup>
+
+### Callback & Inline Updates
+
+<CardGroup cols={2}>
+  <Card title="CallbackQuery" icon="mouse-pointer" href="/handlers/updates/callback">
+    Inline button callbacks
+  </Card>
+  <Card title="InlineQuery" icon="search" href="/handlers/updates/inline">
+    Inline queries (@yourbot query)
+  </Card>
+  <Card title="InlineCallbackQuery" icon="hand-pointer" href="/handlers/updates/inline">
+    Inline result button clicks
+  </Card>
+  <Card title="InlineSend" icon="paper-plane" href="/handlers/updates/inline">
+    Chosen inline results
+  </Card>
+</CardGroup>
+
+### Other Updates
+
+<CardGroup cols={2}>
+  <Card title="ParticipantUpdate" icon="users">
+    Chat participant changes
+  </Card>
+  <Card title="ActionMessage" icon="bell">
+    Service messages
+  </Card>
+  <Card title="Raw Updates" icon="code">
+    Raw Telegram updates
+  </Card>
+</CardGroup>
+
+## Handling Different Update Types
+
+### New Messages
+
+Handle [NewMessage](/handlers/updates/newmessage) updates with full access to message data:
+
+```go
+client.On("message", func(m *telegram.NewMessage) error {
+    fmt.Printf("Received: %s\n", m.Text())
+    
+    // Reply to message
+    m.Reply("Got your message!")
+    
+    // Access media
+    if photo := m.Photo(); photo != nil {
+        m.Reply("Nice photo!")
+    }
+    
+    return nil
+})
+```
+
+### Edited Messages
+
+```go
+client.On("edit", func(m *telegram.NewMessage) error {
+    fmt.Printf("Message edited: %s\n", m.Text())
+    return nil
+})
+```
+
+### Deleted Messages
+
+```go
+client.On("delete", func(d *telegram.DeleteMessage) error {
+    fmt.Printf("Message %d deleted\n", d.ID)
+    return nil
+})
+```
+
+### Albums (Media Groups)
+
+Handle [Album](/handlers/updates/album) updates for grouped media:
+
+```go
+client.On("album", func(a *telegram.Album) error {
+    fmt.Printf("Received album with %d items\n", len(a.Messages))
+    
+    // Process each item
+    for i, msg := range a.Messages {
+        fmt.Printf("Item %d: %s\n", i+1, msg.MediaType())
+    }
+    
+    // Reply to first message
+    a.Messages[0].Reply("Got your album!")
+    
+    return nil
+})
+```
+
+### Callback Queries
+
+Handle [CallbackQuery](/handlers/updates/callback) updates from inline button clicks:
+
+```go
+client.On("callback", func(c *telegram.CallbackQuery) error {
+    data := c.DataString()
+    
+    // Answer the callback (required)
+    c.Answer("Button clicked!", &telegram.CallbackOptions{
+		Alert: true,
+	})
+    
+    // Edit the message
+    c.Edit("You clicked: " + data)
+    
+    return nil
+})
+```
+
+### Inline Queries
+
+Handle [InlineQuery](/handlers/updates/inline) updates:
+
+```go
+client.On("inline", func(q *telegram.InlineQuery) error {
+    builder := q.Builder()
+    
+    // Add results
+    builder.Article(
+        "Result Title",
+        "Description",
+        "Message text when selected",
+    )
+    
+    builder.Photo("https://example.com/photo.jpg")
+    
+    // Send results
+    q.Answer(builder.Results())
+    return nil
+})
+```
+
+### Chosen Inline Results
+
+```go
+client.On("choseninline", func(s *telegram.InlineSend) error {
+    fmt.Printf("User chose result: %s\n", s.ID)
+    
+    // Edit the sent message
+    s.Edit("Thanks for choosing!")
+    
+    return nil
+})
+```
+
+### Participant Updates
+
+```go
+client.On("participant", func(p *telegram.ParticipantUpdate) error {
+    if p.IsJoined() {
+        fmt.Printf("User %d joined chat %d\n", p.UserID, p.ChatID)
+    } else if p.IsLeft() {
+        fmt.Printf("User %d left chat %d\n", p.UserID, p.ChatID)
+    }
+    return nil
+})
+```
+
+### Action Messages
+
+Handle service messages (user joined, pinned message, etc.):
+
+```go
+client.On("action", func(m *telegram.NewMessage) error {
+    // Handle service messages
+    return nil
+})
+```
+
+### Raw Updates
+
+Handle raw Telegram updates for advanced use cases:
+
+```go
+client.On("raw", func(update telegram.Update, client *telegram.Client) error {
+    switch u := update.(type) {
+    case *telegram.UpdateNewMessage:
+        // Handle raw message update
+    case *telegram.UpdateEditMessage:
+        // Handle raw edit update
+    default:
+        fmt.Printf("Unhandled update type: %T\n", u)
+    }
+    return nil
+})
+```
+
+## Available Events
 
 <CodeGroup>
 
@@ -139,13 +345,87 @@ client.On("raw", func(u telegram.Update, c *telegram.Client) error {
 
 </CodeGroup>
 
+## Filtering Updates
+
+Apply [filters](/handlers/filters) to handle specific updates:
+
+```go
+import "github.com/amarnathcjd/gogram/telegram"
+
+client.On("message", handler, telegram.FilterPrivate)
+client.On("message", handler, telegram.FilterGroup)
+client.On("message", handler, telegram.FilterPhoto)
+client.On("message", handler, 
+    telegram.FilterAnd(telegram.FilterPrivate, telegram.FilterPhoto))
+// or 
+client.On("message", handler, telegram.FilterPrivate, telegram.FilterPhoto)
+```
+
+### Custom Filters
+
+Create custom filter functions:
+
+```go
+adminOnly := filters.FilterFunc(func(m *telegram.NewMessage) bool {
+    return m.SenderID == 123456789
+})
+
+client.On("message", handler, adminOnly)
+```
+
+## Pattern Matching
+
+### Command Patterns
+
+```go
+// Basic command
+client.On("cmd:start", handler)
+
+// Multiple commands with same handler
+client.On("cmd:help", handler)
+client.On("cmd:about", handler)
+
+// Command with regex
+client.On("cmd:set.*", handler)
+```
+
+### String Patterns
+
+```go
+// Exact match
+client.On("message:hello", func(m *telegram.NewMessage) error {
+    m.Reply("Hi there!")
+    return nil
+})
+
+// Regex pattern
+client.On("message:^(hi|hello|hey)", func(m *telegram.NewMessage) error {
+    m.Reply("Hey!")
+    return nil
+})
+```
+
+### Callback Patterns
+
+```go
+// Match callback data
+client.On("callback:button_1", func(c *telegram.CallbackQuery) error {
+    dt := c.DataString()
+    // Handle button_1 callback
+    return nil
+})
+
+// Regex pattern for button groups
+client.On("callback:^btn_.*", handler)
+```
+
 ## Handler Groups
 
-Handler groups allow you to control the order and flow of handler execution. By default, handlers run in **Group 0** concurrently.
+Handler groups control the order and flow of handler execution. By default, handlers run in **Group 0** concurrently.
 
 ### How Groups Work
 
-- **Negative Groups** (e.g., -1): Execute first, sequentially
+- **Conversation Group** (-1): Runs first, sequentially, used internally for conversations
 - **Group 0** (default): Execute concurrently (parallel)
 - **Positive Groups** (1, 2, 3...): Execute in order, sequentially
 
@@ -153,13 +433,16 @@ Handler groups allow you to control the order and flow of handler execution. By 
 
 ```go
 // Default group (0) - runs concurrently
-handle := client.On("message", func(m *telegram.NewMessage) error {
+client.On("message", func(m *telegram.NewMessage) error {
     fmt.Println("This runs in parallel")
     return nil
 })
 
 // Conversation group (-1) - runs first
-handle.SetGroup(telegram.ConversationGroup)
+client.On("message", func(m *telegram.NewMessage) error {
+    fmt.Println("This runs first")
+    return nil
+}).SetGroup(telegram.ConversationGroup)
 
 // Custom group (1) - runs sequentially after group -1
 handle.SetGroup(1)
@@ -206,15 +489,12 @@ client.On("cmd:admin", func(m *telegram.NewMessage) error {
 ### String Patterns
 
 ```go
-// Exact match
 client.On("message:hello", func(m *telegram.NewMessage) error {
     m.Reply("Hi there!")
     return nil
 })
-
-// Regex pattern
 client.On("message:^(hi|hello|hey)", func(m *telegram.NewMessage) error {
-    m.Reply("Hey!")
+    m.Reply("Hey!") // works for hi, hello, hey
     return nil
 })
 ```
@@ -222,10 +502,7 @@ client.On("message:^(hi|hello|hey)", func(m *telegram.NewMessage) error {
 ### Command Patterns
 
 ```go
-// Basic command
 client.On("cmd:start", handler)
-
-// Command with regex
 client.On("cmd:set.*", handler)
 ```
 
@@ -234,11 +511,11 @@ client.On("cmd:set.*", handler)
 ```go
 // Match callback data
 client.On("callback:button_1", func(c *telegram.CallbackQuery) error {
+    dt := c.DataString()
     // Handle button_1 callback
     return nil
 })
 
-// Regex pattern
 client.On("callback:^btn_.*", handler)
 ```
 
@@ -251,31 +528,42 @@ handle := client.On("message", handler)
 client.RemoveHandle(handle)
 ```
 
+## Advanced Patterns
+
+### Using Conversations
+
+Use the built-in conversation feature from [NewMessage](/handlers/updates/newmessage):
+More details [here](/conversations).
+
+```go
+client.On("cmd:register", func(m *telegram.NewMessage) error {
+    resp, err := m.Ask("What's your email?")
+    if err != nil {
+        return err
+    }
+
+    fmt.Printf("User email: %s\n", resp.Text())
+    return nil
+})
+```
+
 ## Alternative Handler Methods
 
 While `client.On()` is recommended, you can also use specific methods:
 
 ```go
-// Message handlers
 client.AddMessageHandler(pattern, handler, filters...)
 client.AddCommandHandler("start", handler, filters...)
-
-// Callback handlers
 client.AddCallbackHandler(pattern, handler, filters...)
-
-// Inline handlers
+client.AddInlineCallbackHandler(pattern, handler)
 client.AddInlineHandler(pattern, handler)
-
-// Edit handlers
+client.AddInlineSendHandler(handler)
 client.AddEditHandler(pattern, handler, filters...)
-
-// Delete handlers
+client.AddActionHandler(handler)
+client.AddParticipantHandler(handler)
+client.AddJoinRequestHandler(handler)
 client.AddDeleteHandler(pattern, handler)
-
-// Album handlers
 client.AddAlbumHandler(handler)
-
-// Raw handlers
 client.AddRawHandler(updateType, handler)
 ```
 
@@ -296,11 +584,10 @@ func main() {
     client.LoginBot("bot_token")
     
     // Message handler with group and priority
-    msgHandle := client.On("message", func(m *telegram.NewMessage) error {
+    client.On("message", func(m *telegram.NewMessage) error {
         m.Reply("Processing message...")
         return nil
-    }, telegram.FilterPrivate)
-    msgHandle.SetGroup(1).SetPriority(5)
+    }, telegram.FilterPrivate).SetGroup(1).SetPriority(5)
     
     // Command handler
     client.On("cmd:start", func(m *telegram.NewMessage) error {
@@ -323,7 +610,6 @@ func main() {
         return nil
     })
     
-    // Album handler
     client.On("album", func(a *telegram.Album) error {
         a.Messages[0].Reply("Received album with %d items", len(a.Messages))
         return nil
@@ -339,14 +625,17 @@ func main() {
   <Card title="Use client.On()" icon="check">
     Recommended method for adding handlers - clean and simple
   </Card>
-  <Card title="Handle Errors" icon="triangle-exclamation">
-    Always handle errors in your handlers, don't panic
+  <Card title="Return Errors" icon="triangle-exclamation">
+    Always return errors from handlers for proper error handling
+  </Card>
+  <Card title="Use Filters" icon="filter">
+    Filter updates early to avoid unnecessary processing with [filters](/handlers/filters)
+  </Card>
+  <Card title="Handle Errors" icon="shield-exclamation">
+    Check errors and handle them gracefully - see [Error Handling](/errors)
   </Card>
   <Card title="Use Groups Wisely" icon="layer-group">
     Use groups for sequential processing, default group for parallel
-  </Card>
-  <Card title="Filter Early" icon="filter">
-    Use filters to avoid unnecessary processing
   </Card>
   <Card title="Stop Propagation" icon="hand">
     Return EndGroup when you want to stop further handlers
@@ -354,16 +643,37 @@ func main() {
   <Card title="Set Priorities" icon="arrow-up-1-9">
     Use priorities within groups to control execution order
   </Card>
+  <Card title="Close Conversations" icon="door-closed">
+    Always defer conv.Close() when using manual conversations
+  </Card>
+  <Card title="Check Context" icon="shield-check">
+    Verify message context (chat type, sender, etc.) before processing
+  </Card>
+  <Card title="Avoid Blocking" icon="bolt">
+    Don't block handlers with long operations - use goroutines
+  </Card>
 </CardGroup>
 
 ## Next Steps
 
 <CardGroup cols={2}>
+  <Card title="NewMessage" icon="message" href="/handlers/updates/newmessage">
+    Complete NewMessage reference
+  </Card>
+  <Card title="CallbackQuery" icon="mouse-pointer" href="/handlers/updates/callback">
+    Handle button callbacks
+  </Card>
+  <Card title="InlineQuery" icon="search" href="/handlers/updates/inline">
+    Build inline bots
+  </Card>
+  <Card title="Album" icon="images" href="/handlers/updates/album">
+    Handle media groups
+  </Card>
   <Card title="Filters" icon="filter" href="/handlers/filters">
     Learn about filtering messages
   </Card>
-  <Card title="Update Types" icon="bell" href="/handlers/updates">
-    Explore all update types
+  <Card title="Error Handling" icon="triangle-exclamation" href="/errors">
+    Handle errors effectively
   </Card>
   <Card title="Examples" icon="code" href="/examples">
     See practical examples
