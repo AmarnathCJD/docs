@@ -144,6 +144,5 @@
   },
   "appearance": {
     "strict": false
-  },
-  "backgroundImage": "/images/lightbackground.png"
+  }
 }
