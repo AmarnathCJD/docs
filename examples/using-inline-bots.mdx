@@ -1,0 +1,249 @@
+---
+title: "Using Inline Bots"
+description: "Invoke and use other inline bots in your application"
+---
+
+## Overview
+
+This example shows how to programmatically use other inline bots by sending inline queries and handling their results.
+
+## Code
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:   6,
+		AppHash: "YOUR_APP_HASH",
+	})
+	
+	// Login as user account (required for inline queries)
+	client.Login("+1234567890")
+
+	// Perform an inline query to another bot
+	results, err := client.InlineQuery("@botusername", &telegram.InlineOptions{
+		Dialog: "@wheretoperform", // Chat where bot will be invoked
+		Query:  "the query",       // Search query to send to bot
+	})
+	
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	// Display results
+	fmt.Printf("Got %d results from inline bot\n", len(results))
+	for i, result := range results {
+		fmt.Printf("%d. %s\n", i+1, result.Title)
+	}
+	
+	// Send first result to a chat
+	if len(results) > 0 {
+		client.SendInlineResult("@wheretoperform", results[0])
+	}
+
+	client.Idle()
+}
+```
+
+## How It Works
+
+1. **Authenticate**: Login with user account (bots cannot use inline queries)
+2. **Query Bot**: Call `InlineQuery()` with bot username and query parameters
+3. **Receive Results**: Get array of inline results from the bot
+4. **Send Result**: Optionally send a result to a chat using `SendInlineResult()`
+
+## InlineOptions Parameters
+
+<ParamField path="Dialog" type="string">
+  Chat where the inline query will be performed (username or chat ID)
+</ParamField>
+
+<ParamField path="Query" type="string">
+  Search query to send to the inline bot
+</ParamField>
+
+<ParamField path="Offset" type="string">
+  Pagination offset for getting more results
+</ParamField>
+
+<ParamField path="GeoPoint" type="*InputGeoPoint">
+  Location data for location-based inline bots
+</ParamField>
+
+## Practical Examples
+
+<Tabs>
+<Tab title="Search Images">
+```go
+// Use @pic bot to search for images
+func SearchImages(client *telegram.Client, query string) {
+	results, err := client.InlineQuery("@pic", &telegram.InlineOptions{
+		Dialog: "me", // Use "me" for Saved Messages
+		Query:  query,
+	})
+	
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	
+	fmt.Printf("Found %d images for '%s'\n", len(results), query)
+	
+	// Send first image to Saved Messages
+	if len(results) > 0 {
+		client.SendInlineResult("me", results[0])
+	}
+}
+```
+</Tab>
+
+<Tab title="YouTube Search">
+```go
+// Use @youtube bot to search videos
+func SearchYouTube(client *telegram.Client, query string, chat string) {
+	results, err := client.InlineQuery("@youtube", &telegram.InlineOptions{
+		Dialog: chat,
+		Query:  query,
+	})
+	
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	
+	fmt.Println("YouTube results:")
+	for i, result := range results {
+		fmt.Printf("%d. %s\n", i+1, result.Title)
+	}
+	
+	// Let user choose which result to send
+	// (In a real bot, you'd use keyboards for selection)
+}
+```
+</Tabs>
+
+## Popular Inline Bots
+
+<CardGroup cols={2}>
+  <Card title="@gif" icon="image">
+    Search and send GIFs
+  </Card>
+  <Card title="@pic" icon="camera">
+    Search images from web
+  </Card>
+  <Card title="@youtube" icon="video">
+    Search YouTube videos
+  </Card>
+  <Card title="@vid" icon="film">
+    Search videos
+  </Card>
+  <Card title="@wiki" icon="book">
+    Wikipedia articles
+  </Card>
+  <Card title="@imdb" icon="star">
+    Movie information
+  </Card>
+  <Card title="@foursquare" icon="location-dot">
+    Location-based places
+  </Card>
+  <Card title="@sticker" icon="face-smile">
+    Search stickers
+  </Card>
+</CardGroup>
+
+## Complete Example: Media Bot
+
+```go
+func MediaSearchBot(client *telegram.Client) {
+	client.On("message", func(m *telegram.NewMessage) error {
+		// Parse command: /gif <query>, /pic <query>, /yt <query>
+		if !m.IsCommand() {
+			return nil
+		}
+		
+		cmd := m.Args()[0]
+		query := strings.Join(m.Args()[1:], " ")
+		
+		if query == "" {
+			return m.Reply("Please provide a search query")
+		}
+		
+		var botUsername string
+		switch cmd {
+		case "gif":
+			botUsername = "@gif"
+		case "pic":
+			botUsername = "@pic"
+		case "yt":
+			botUsername = "@youtube"
+		default:
+			return nil
+		}
+		
+		// Query inline bot
+		results, err := client.InlineQuery(botUsername, &telegram.InlineOptions{
+			Dialog: m.ChatID(),
+			Query:  query,
+		})
+		
+		if err != nil {
+			return m.Reply("Error: " + err.Error())
+		}
+		
+		if len(results) == 0 {
+			return m.Reply("No results found")
+		}
+		
+		// Send first result
+		client.SendInlineResult(m.ChatID(), results[0])
+		
+		return nil
+	})
+}
+
+func main() {
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:   6,
+		AppHash: "YOUR_APP_HASH",
+	})
+	
+	client.Login("+1234567890")
+	MediaSearchBot(client)
+	client.Idle()
+}
+```
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` with your app hash
+2. Replace `+1234567890` with your phone number
+3. Replace `@botusername` with the inline bot you want to use (e.g., `@gif`, `@pic`)
+4. Replace `@wheretoperform` with target chat (or use `"me"` for Saved Messages)
+5. Run the program
+
+<Note>
+**User Account Required**: Only user accounts can perform inline queries. Bot accounts cannot use other inline bots.
+</Note>
+
+<Tip>
+Test inline queries in Saved Messages (`"me"`) to avoid spamming other chats during development.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Inline Queries" icon="search" href="/examples/inline-queries">
+    Create your own inline bot
+  </Card>
+  <Card title="Bot Keyboards" icon="keyboard" href="/examples/bot-keyboards">
+    Build interactive result selectors
+  </Card>
+</CardGroup>

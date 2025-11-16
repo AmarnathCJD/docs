@@ -1,0 +1,145 @@
+---
+title: "Broadcast Messages"
+description: "Send messages to all bot users without external database"
+---
+
+## Overview
+
+This example demonstrates how to broadcast messages to all users who have interacted with your bot using Telegram's update history, without needing an external database.
+
+## Code
+
+```go
+package examples
+
+import (
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+// Broadcasting to bot users/chats using updates.GetDifference
+// client.Broadcast returns peers in update history via channels
+// These peers can be used for broadcasting messages
+// No external database is required to store user/chat IDs
+
+const (
+	appID    = 6
+	appHash  = "YOUR_APP_HASH"
+	botToken = "YOUR_BOT_TOKEN"
+)
+
+func main() {
+	// Create a new client object
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:    appID,
+		AppHash:  appHash,
+		LogLevel: telegram.LogInfo,
+	})
+
+	// Authenticate as a bot
+	client.LoginBot(botToken)
+
+	// Get all users and chats from update history
+	users, chats, err := client.Broadcast()
+	if err != nil {
+		panic(err)
+	}
+
+	// Broadcast to all users
+	for user := range users {
+		client.SendMessage(user, "Hello, This is a broadcast message")
+	}
+
+	// Broadcast to all chats (groups/channels)
+	for chat := range chats {
+		client.SendMessage(chat, "Hello, This is a broadcast message")
+	}
+}
+```
+
+## How It Works
+
+1. **Fetch Update History**: `Broadcast()` retrieves all peers from bot's update history
+2. **Channel Iteration**: Returns two channels - one for users, one for chats
+3. **Send Messages**: Iterates through each peer and sends the broadcast message
+4. **No Database Needed**: Uses Telegram's built-in update storage
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` and `YOUR_BOT_TOKEN` with your credentials
+2. Run the program
+3. The broadcast will be sent to all users and chats in the bot's update history
+
+<Warning>
+**Rate Limits**: Telegram has strict rate limits for broadcasting:
+- Max ~30 messages per second to different users
+- Slower for groups
+- Use `time.Sleep()` between messages to avoid flood errors
+</Warning>
+
+<Note>
+**Update History Limit**: `Broadcast()` only returns peers from recent update history. For comprehensive user tracking, consider maintaining your own database.
+</Note>
+
+## Best Practices
+
+1. **Rate Limiting**: Add delays between messages to avoid flood errors
+2. **Error Handling**: Track failed sends and retry later
+3. **User Privacy**: Allow users to opt-out of broadcasts
+4. **Concurrency**: Use goroutines for faster broadcasting, but limit concurrency
+5. **Progress Tracking**: For large broadcasts, notify admins of progress
+
+## Example: Broadcast Command
+
+```go
+func main() {
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:    appID,
+		AppHash:  appHash,
+		LogLevel: telegram.LogInfo,
+	})
+	
+	client.LoginBot(botToken)
+	
+	// Admin command to broadcast
+	client.On("message", func(m *telegram.NewMessage) error {
+		// Check if user is admin
+		if m.SenderID() != YOUR_ADMIN_ID {
+			return nil
+		}
+		
+		// /broadcast command
+		if m.IsCommand() && m.Text() == "/broadcast" {
+			// Get message to broadcast
+			resp, _ := m.Ask("Send the message to broadcast:")
+			
+			// Confirm
+			keyboard := telegram.NewKeyboard().AddRow(
+				telegram.Button.Data("✅ Confirm", "broadcast_yes"),
+				telegram.Button.Data("❌ Cancel", "broadcast_no"),
+			).Build()
+			
+			m.Reply("Broadcast this message?", telegram.SendOptions{
+				ReplyMarkup: keyboard,
+			})
+			
+			// Store message in context for callback
+			// ... handle callback to actually broadcast
+		}
+		
+		return nil
+	})
+	
+	client.Idle()
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Echo Bot" icon="reply" href="/examples/echo-bot">
+    Build a simple message handler
+  </Card>
+  <Card title="Conversations" icon="comments" href="/examples/conversation">
+    Handle multi-step conversations
+  </Card>
+</CardGroup>

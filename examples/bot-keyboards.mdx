@@ -1,0 +1,373 @@
+---
+title: "Bot Keyboards"
+description: "Create interactive inline and reply keyboards"
+---
+
+## Overview
+
+This example shows how to create different types of keyboards for your bot, including inline buttons, grid layouts, and custom keyboard arrangements.
+
+## Code
+
+```go
+package examples
+
+import (
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+const (
+	appID    = 6
+	appHash  = "YOUR_APP_HASH"
+	botToken = "YOUR_BOT_TOKEN"
+)
+
+func main() {
+	// Create a new client object
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:    appID,
+		AppHash:  appHash,
+		LogLevel: telegram.LogInfo,
+	})
+
+	// Authenticate as a bot
+	client.LoginBot(botToken)
+
+	// Send a message with inline keyboard
+	client.SendMessage("username", "Hello, This is ReplyMarkup Example", &telegram.SendOptions{
+		ReplyMarkup: telegram.NewKeyboard().AddRow( // Add a row of buttons
+			telegram.Button.Data("Help", "help"),
+			telegram.Button.URL("Google", "https://www.google.com"),
+		).Build(), // .AddRow() can be chained to add more rows
+	})
+
+	// Handle /start command with grid layout
+	client.On("message:/start", func(message *telegram.NewMessage) error {
+		message.Reply("Hello:>", telegram.SendOptions{
+			// Create a 2x3 grid (2 rows, 3 columns)
+			ReplyMarkup: telegram.NewKeyboard().NewGrid(2, 3, // 2 rows, 3 columns format
+				telegram.Button.URL("Google", "https://www.google.com"),
+				telegram.Button.Data("Help", "help"),
+				telegram.Button.Data("Main Menu", "main"),
+				telegram.Button.Data("Source", "source"),
+				telegram.Button.SwitchInline("goinline", true, "query"),
+				telegram.Button.Data("Back", "back")).Build(),
+		})
+		return nil
+	})
+
+	// Example: 2 column layout
+	telegram.NewKeyboard().NewColumn(2, // 2 columns format
+		telegram.Button.URL("Google", "https://www.google.com"),
+		telegram.Button.URL("Yahoo", "https://www.yahoo.com"),
+		telegram.Button.URL("Bing", "https://www.bing.com"),
+		telegram.Button.URL("DuckDuckGo", "https://www.duckduckgo.com"),
+	).Build() // Buttons equally divided into 2 columns
+
+	// Example: 3 row layout
+	telegram.NewKeyboard().NewRow(3, // 3 rows format
+		telegram.Button.URL("Google", "https://www.google.com"),
+		telegram.Button.URL("Yahoo", "https://www.yahoo.com"),
+		telegram.Button.URL("Bing", "https://www.bing.com"),
+		telegram.Button.URL("DuckDuckGo", "https://www.duckduckgo.com"),
+	).Build() // Buttons equally divided into 3 rows
+
+	// Handle callback from help button
+	client.On("callback:help", func(callback *telegram.CallbackQuery) error {
+		callback.Answer("Help is on the way!")
+		return nil
+	})
+
+	// Keep bot running
+	client.Idle()
+}
+```
+
+## How It Works
+
+1. **Create Keyboard**: Use `telegram.NewKeyboard()` to start building
+2. **Add Buttons**: Chain `.AddRow()` or use `.NewGrid()`, `.NewColumn()`, `.NewRow()`
+3. **Build**: Call `.Build()` to finalize the keyboard
+4. **Attach**: Pass keyboard to `SendOptions.ReplyMarkup`
+
+## Button Types
+
+<Tabs>
+<Tab title="Data Button">
+```go
+// Callback data button (triggers callback query)
+keyboard := telegram.NewKeyboard().AddRow(
+	telegram.Button.Data("Click Me", "button_data"),
+	telegram.Button.Data("Settings", "settings_menu"),
+).Build()
+
+// Handle callback
+client.On("callback:button_data", func(c *telegram.CallbackQuery) error {
+	c.Answer("Button clicked!")
+	return nil
+})
+```
+</Tab>
+
+<Tab title="URL Button">
+```go
+// URL button (opens link)
+keyboard := telegram.NewKeyboard().AddRow(
+	telegram.Button.URL("Google", "https://www.google.com"),
+	telegram.Button.URL("GitHub", "https://github.com"),
+).Build()
+```
+</Tab>
+
+<Tab title="Inline Switch">
+```go
+// Switch to inline mode button
+keyboard := telegram.NewKeyboard().AddRow(
+	// SwitchInline(text, samePeer, query)
+	telegram.Button.SwitchInline("Search", false, ""),      // Opens inline in any chat
+	telegram.Button.SwitchInline("Search Here", true, ""),  // Opens inline in same chat
+).Build()
+```
+</Tab>
+
+<Tab title="Login Button">
+```go
+// Login URL button (Telegram Login Widget)
+keyboard := telegram.NewKeyboard().AddRow(
+	telegram.Button.Auth("Login", "https://example.com/auth"),
+).Build()
+```
+</Tab>
+
+<Tab title="WebApp Button">
+```go
+// Web App button (opens mini app)
+keyboard := telegram.NewKeyboard().AddRow(
+	telegram.Button.WebView("Open App", "https://example.com/webapp"),
+).Build()
+```
+</Tab>
+</Tabs>
+
+## Keyboard Layouts
+
+<Tabs>
+<Tab title="Manual Rows">
+```go
+// Add buttons row by row
+keyboard := telegram.NewKeyboard().
+	AddRow(
+		telegram.Button.Data("Button 1", "btn1"),
+		telegram.Button.Data("Button 2", "btn2"),
+	).
+	AddRow(
+		telegram.Button.Data("Button 3", "btn3"),
+	).
+	AddRow(
+		telegram.Button.URL("Google", "https://google.com"),
+		telegram.Button.URL("GitHub", "https://github.com"),
+	).
+	Build()
+```
+</Tab>
+
+<Tab title="Grid Layout">
+```go
+// Automatically arrange buttons in grid
+// NewGrid(rows, cols, buttons...)
+keyboard := telegram.NewKeyboard().NewGrid(3, 2, // 3 rows, 2 columns
+	telegram.Button.Data("1", "1"),
+	telegram.Button.Data("2", "2"),
+	telegram.Button.Data("3", "3"),
+	telegram.Button.Data("4", "4"),
+	telegram.Button.Data("5", "5"),
+	telegram.Button.Data("6", "6"),
+).Build()
+
+// Result:
+// [1] [2]
+// [3] [4]
+// [5] [6]
+```
+</Tab>
+
+<Tab title="Column Layout">
+```go
+// Divide buttons into N columns
+// NewColumn(numColumns, buttons...)
+keyboard := telegram.NewKeyboard().NewColumn(2, // 2 columns
+	telegram.Button.Data("A", "a"),
+	telegram.Button.Data("B", "b"),
+	telegram.Button.Data("C", "c"),
+	telegram.Button.Data("D", "d"),
+).Build()
+
+// Result:
+// [A] [B]
+// [C] [D]
+```
+</Tab>
+
+<Tab title="Row Layout">
+```go
+// Divide buttons into N rows
+// NewRow(numRows, buttons...)
+keyboard := telegram.NewKeyboard().NewRow(3, // 3 rows
+	telegram.Button.Data("X", "x"),
+	telegram.Button.Data("Y", "y"),
+	telegram.Button.Data("Z", "z"),
+).Build()
+
+// Result (distributed evenly):
+// [X]
+// [Y]
+// [Z]
+```
+</Tab>
+</Tabs>
+
+## Complete Example
+
+```go
+func HandleMenu(m *telegram.NewMessage) error {
+	// Main menu with multiple button types
+	keyboard := telegram.NewKeyboard().
+		AddRow(
+			telegram.Button.Data("📊 Statistics", "stats"),
+			telegram.Button.Data("⚙️ Settings", "settings"),
+		).
+		AddRow(
+			telegram.Button.Data("❓ Help", "help"),
+			telegram.Button.URL("📖 Docs", "https://docs.example.com"),
+		).
+		AddRow(
+			telegram.Button.SwitchInline("🔍 Search", false, ""),
+		).
+		Build()
+	
+	m.Reply("Main Menu", telegram.SendOptions{
+		ReplyMarkup: keyboard,
+	})
+	
+	return nil
+}
+
+// Handle all callbacks
+func HandleCallbacks(c *telegram.CallbackQuery) error {
+	switch c.Data {
+	case "stats":
+		c.Edit("Statistics: ...")
+	case "settings":
+		// Show settings keyboard
+		settingsKb := telegram.NewKeyboard().
+			AddRow(telegram.Button.Data("🔔 Notifications", "notif")).
+			AddRow(telegram.Button.Data("🌐 Language", "lang")).
+			AddRow(telegram.Button.Data("⬅️ Back", "main")).
+			Build()
+		
+		c.Edit("Settings", &telegram.EditOptions{
+			ReplyMarkup: settingsKb,
+		})
+	case "help":
+		c.Answer("Help information here", &telegram.AnswerOptions{
+			Alert: true, // Show as alert
+		})
+	case "main":
+		HandleMenu(c.Message.(*telegram.NewMessage))
+	}
+	
+	return nil
+}
+```
+
+## Pagination Example
+
+Create paginated keyboards for navigation:
+
+```go
+func CreatePagination(page, totalPages int) telegram.ReplyMarkup {
+	keyboard := telegram.NewKeyboard()
+	
+	// Add navigation buttons
+	var buttons []telegram.Button
+	
+	if page > 1 {
+		buttons = append(buttons, telegram.Button.Data("◀️ Prev", fmt.Sprintf("page_%d", page-1)))
+	}
+	
+	buttons = append(buttons, telegram.Button.Data(fmt.Sprintf("%d/%d", page, totalPages), "current"))
+	
+	if page < totalPages {
+		buttons = append(buttons, telegram.Button.Data("Next ▶️", fmt.Sprintf("page_%d", page+1)))
+	}
+	
+	keyboard.AddRow(buttons...)
+	return keyboard.Build()
+}
+
+// Usage
+func ShowPage(c *telegram.CallbackQuery, page int) error {
+	keyboard := CreatePagination(page, 10)
+	c.Edit(fmt.Sprintf("Page %d content", page), &telegram.EditOptions{
+		ReplyMarkup: keyboard,
+	})
+	return nil
+}
+```
+
+## Reply Keyboards
+
+Create custom reply keyboards (bottom keyboard):
+
+```go
+// Reply keyboard (replaces user's keyboard)
+replyKeyboard := telegram.NewReplyKeyboard(
+	[]telegram.KeyboardButtonRow{
+		{
+			Buttons: []telegram.KeyboardButton{
+				{Text: "Option 1"},
+				{Text: "Option 2"},
+			},
+		},
+		{
+			Buttons: []telegram.KeyboardButton{
+				{Text: "Option 3"},
+			},
+		},
+	},
+	false, // OneTime - hide after use
+	false, // Resize keyboard
+	false, // Selective - show to specific users
+)
+
+client.SendMessage("user", "Choose an option:", &telegram.SendOptions{
+	ReplyMarkup: replyKeyboard,
+})
+
+// Remove keyboard
+client.SendMessage("user", "Keyboard removed", &telegram.SendOptions{
+	ReplyMarkup: telegram.NewReplyKeyboardHide(false),
+})
+```
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` and `YOUR_BOT_TOKEN` with your credentials
+2. Replace `"username"` with a target username or chat ID
+3. Run the program
+4. Send `/start` to your bot to see the keyboard
+
+<Tip>
+Use descriptive callback data to easily identify button actions. Consider using prefixes like `menu:`, `page:`, `action:` to organize callbacks.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Callback Queries" icon="hand-pointer" href="/examples/callback-queries">
+    Handle button click events
+  </Card>
+  <Card title="Inline Queries" icon="search" href="/examples/inline-queries">
+    Handle inline bot queries
+  </Card>
+</CardGroup>

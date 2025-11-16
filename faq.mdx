@@ -1,9 +1,12 @@
 ---
 title: FAQ
 description: Frequently asked questions about Gogram
+icon: "circle-question"
 ---
 
-## How do I type cast interface responses?
+<AccordionGroup>
+
+<Accordion title="How do I type cast interface responses?" icon="code">
 
 Many methods in Gogram return interface types that can have multiple implementations. You need to use type assertions or type switches to access the concrete type.
 
@@ -81,7 +84,9 @@ default:
   Use type switches (`switch v := result.(type)`) when you need to handle multiple possible implementations. Use type assertions (`result.(*ConcreteType)`) only when you're certain of the type.
 </Tip>
 
-## Why am I getting "min constructor" errors?
+</Accordion>
+
+<Accordion title="Why am I getting 'min constructor' errors?" icon="triangle-exclamation">
 
 This happens when Telegram assumes you already have the access hash for a peer and sends incomplete data. Enable caching to prevent this:
 
@@ -95,24 +100,34 @@ client, err := telegram.NewClient(telegram.ClientConfig{
 
 See the [Cache documentation](/cache) for more details.
 
-## What Go version is needed?
+</Accordion>
 
-Go 1.18 or higher.
+<Accordion title="What Go version is needed?" icon="golang">
 
-## Is the library stable and production ready?
+Go 1.18 or higher is required for generics support.
 
-YES
+</Accordion>
 
-## What are the resource requirements?
+<Accordion title="Is the library stable and production ready?" icon="check-circle">
+
+YES - Gogram is stable and being used in production by many projects.
+
+</Accordion>
+
+<Accordion title="What are the resource requirements?" icon="microchip">
 
 - **Goroutines**: ~10 - 12 goroutines
 - **Memory**: 10-20 MB RAM usage
 
-## Where can I get help or support?
+</Accordion>
 
-Join the [Telegram Support Group](https://t.me/gogrammers)
+<Accordion title="Where can I get help or support?" icon="telegram">
 
-## Supported Proxy Types
+Join the [Telegram Support Group](https://t.me/gogrammers) for help, questions, and discussions.
+
+</Accordion>
+
+<Accordion title="What proxy types are supported?" icon="network-wired">
 
 Gogram supports the following proxy types:
 - SOCKS5
@@ -122,11 +137,17 @@ Gogram supports the following proxy types:
 
 For more details, see the [Proxy documentation](/proxy).
 
-## Supported Platforms
+</Accordion>
+
+<Accordion title="What platforms are supported?" icon="laptop-code">
 
 Gogram is tested and works on:
 - Linux
 - Windows
 - macOS
-- ARM (Raspberry Pi, etc.) (Not tested)
-- WebAssembly (WASM) (Use WebSocket connections)
+- ARM (Raspberry Pi, etc.)
+- WebAssembly (WASM) - Use WebSocket connections
+
+</Accordion>
+
+</AccordionGroup>

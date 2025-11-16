@@ -1,0 +1,323 @@
+---
+title: "Conversations"
+description: "Handle multi-step conversations with users"
+---
+
+## Overview
+
+This example demonstrates how to create conversational flows where your bot asks questions and waits for user responses.
+
+## Code
+
+```go
+package examples
+
+import (
+	"fmt"
+
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+const (
+	appID    = 6
+	appHash  = "YOUR_APP_HASH"
+	botToken = "YOUR_BOT_TOKEN"
+)
+
+func main() {
+	// Create a new client object
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:    appID,
+		AppHash:  appHash,
+		LogLevel: telegram.LogInfo,
+	})
+
+	// Authenticate as a bot
+	client.LoginBot(botToken)
+
+	// Add message handler with Ask() method
+	client.On("message", convEventHandler)
+
+	// Create a new conversation manually
+	conv, _ := client.NewConversation("username or id", false, 30) // 30 second timeout, false = not exclusive
+	defer conv.Close()
+
+	// Send initial message
+	_, err := conv.Respond("Hello, Please reply to this message")
+	if err != nil {
+		panic(err)
+	}
+	
+	// Wait for user response
+	resp, err := conv.GetResponse() // Wait for any response
+	// resp, err := conv.GetReply() // Wait for reply to specific message
+	// conv.MarkRead() // Mark conversation as read
+	// conv.WaitEvent() // Wait for any custom update
+	
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("response:", resp.Text())
+}
+
+// Handler that uses Ask() for simple conversations
+func convEventHandler(m *telegram.NewMessage) error {
+	// Ask a question and wait for response
+	response, err := m.Ask("What's your name?")
+	if err != nil {
+		return err
+	}
+
+	// Reply with response
+	response.Reply("Nice to meet you, " + response.Text())
+	return nil
+}
+```
+
+## How It Works
+
+1. **Ask Method**: `m.Ask()` sends a message and waits for user response
+2. **Manual Conversation**: `NewConversation()` creates a conversation context
+3. **Wait for Response**: `GetResponse()` blocks until user replies
+4. **Timeout**: Conversations automatically timeout after specified duration
+5. **Close**: Always `defer conv.Close()` to clean up resources
+
+## Ask Method (Simple)
+
+The easiest way to create conversations:
+
+<Tabs>
+<Tab title="Basic Ask">
+```go
+client.On("message", func(m *telegram.NewMessage) error {
+	// Ask and wait for response
+	response, err := m.Ask("What's your favorite color?")
+	if err != nil {
+		return err
+	}
+	
+	m.Reply("Great! I like " + response.Text() + " too!")
+	return nil
+})
+```
+</Tab>
+
+<Tab title="Multiple Questions">
+```go
+client.On("message:/signup", func(m *telegram.NewMessage) error {
+	// Ask for name
+	nameResp, _ := m.Ask("What's your name?")
+	name := nameResp.Text()
+	
+	// Ask for age
+	ageResp, _ := m.Ask("What's your age?")
+	age := ageResp.Text()
+	
+	// Ask for email
+	emailResp, _ := m.Ask("What's your email?")
+	email := emailResp.Text()
+	
+	// Confirm
+	m.Reply(fmt.Sprintf("Registration complete!\nName: %s\nAge: %s\nEmail: %s", 
+		name, age, email))
+	
+	return nil
+})
+```
+</Tab>
+</Tabs>
+
+## Manual Conversations
+
+For more control, use `NewConversation()`:
+
+<Tabs>
+<Tab title="Basic Conversation">
+```go
+func StartConversation(client *telegram.Client, userID int64) {
+	// Create conversation (userID, exclusive, timeout)
+	conv, err := client.NewConversation(userID, false, 30)
+	if err != nil {
+		return
+	}
+	defer conv.Close()
+	
+	// Send message
+	conv.Respond("Hello! Let's chat.")
+	
+	// Wait for response
+	resp, err := conv.GetResponse()
+	if err != nil {
+		conv.Respond("No response received.")
+		return
+	}
+	
+	conv.Respond("You said: " + resp.Text())
+}
+```
+</Tab>
+
+<Tab title="Exclusive Conversation">
+```go
+func ExclusiveConv(client *telegram.Client, userID int64) {
+	// Exclusive = true blocks other handlers during conversation
+	conv, _ := client.NewConversation(userID, true, 60)
+	defer conv.Close()
+	
+	conv.Respond("Starting exclusive conversation. Other handlers are paused.")
+	
+	resp1, _ := conv.GetResponse()
+	conv.Respond("Got: " + resp1.Text())
+	
+	resp2, _ := conv.GetResponse()
+	conv.Respond("Got: " + resp2.Text())
+	
+	conv.Respond("Conversation ended. Other handlers resumed.")
+}
+```
+</Tab>
+
+<Tab title="Wait for Reply">
+```go
+func WaitForReply(conv *telegram.Conversation) {
+	// Send a specific message
+	msg, _ := conv.Respond("Please reply to THIS message.")
+	
+	// Wait for reply to that specific message
+	reply, err := conv.GetReply()
+	if err != nil {
+		conv.Respond("Timeout waiting for reply.")
+		return
+	}
+	
+	conv.Respond("Thanks for replying to my message!")
+}
+```
+</Tab>
+
+<Tab title="Custom Events">
+```go
+func WaitForEvent(conv *telegram.Conversation) {
+	conv.Respond("Send me a photo.")
+
+	// Wait for specific update type
+	update, err := conv.WaitEvent(&telegram.UpdateBotInlineQuery{}) // Returns raw update
+	if err != nil {
+		conv.Respond("Timeout.")
+		return
+	}
+
+	// Check if it's a photo
+	if msg, ok := update.(*telegram.UpdateBotInlineQuery); ok {
+		conv.Respond("You sent a photo with ID: " + msg.Query)
+	}
+}
+
+```
+</Tab>
+</Tabs>
+
+## Conversation Methods
+
+<ParamField path="Respond(text)" type="(*NewMessage, error)">
+  Send a message in the conversation
+</ParamField>
+
+<ParamField path="GetResponse()" type="(*NewMessage, error)">
+  Wait for any response from the user
+</ParamField>
+
+<ParamField path="GetReply()" type="(*NewMessage, error)">
+  Wait for a reply to the last sent message
+</ParamField>
+
+<ParamField path="WaitClick()" type="(*CallbackQuery, error)">
+  Wait for a button click in the conversation
+</ParamField>
+
+<ParamField path="WaitEvent()" type="(Update, error)">
+  Wait for any update event in the conversation
+</ParamField>
+
+<ParamField path="MarkRead()" type="error">
+  Mark conversation messages as read
+</ParamField>
+
+<ParamField path="Close()" type="">
+  End the conversation and clean up resources
+</ParamField>
+
+## Complete Example: Survey Bot
+
+```go
+func SurveyBot(m *telegram.NewMessage) error {
+	m.Reply("📋 Let's start a quick survey!")
+	
+	// Question 1
+	q1, _ := m.Ask("1. How would you rate our service? (1-5)")
+	rating := q1.Text()
+	
+	// Question 2
+	q2, _ := m.Ask("2. What do you like most?")
+	likes := q2.Text()
+	
+	// Question 3
+	q3, _ := m.Ask("3. What can we improve?")
+	improvements := q3.Text()
+	
+	// Summary
+	summary := fmt.Sprintf(
+		"✅ Survey Complete!\n\n"+
+			"Rating: %s/5\n"+
+			"Likes: %s\n"+
+			"Improvements: %s\n\n"+
+			"Thank you for your feedback!",
+		rating, likes, improvements,
+	)
+	
+	m.Reply(summary)
+	
+	// Save to database...
+	
+	return nil
+}
+
+func main() {
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:    appID,
+		AppHash:  appHash,
+		LogLevel: telegram.LogInfo,
+	})
+	
+	client.LoginBot(botToken)
+	client.On("message:/survey", SurveyBot)
+	client.Idle()
+}
+```
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` and `YOUR_BOT_TOKEN` with your credentials
+2. Replace `"username or id"` with a target user (for manual conversation example)
+3. Run the program
+4. Send any message to trigger `convEventHandler`, which will ask for your name
+
+<Note>
+**Timeouts**: Conversations have a default timeout. Use appropriate timeout values based on expected response time.
+</Note>
+
+<Tip>
+For complex multi-step flows, consider using state management or conversation states to track progress.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Echo Bot" icon="reply" href="/examples/echo-bot">
+    Simple message handling
+  </Card>
+  <Card title="Bot Keyboards" icon="keyboard" href="/examples/bot-keyboards">
+    Create interactive keyboards for better UX
+  </Card>
+</CardGroup>

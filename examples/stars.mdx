@@ -1,0 +1,146 @@
+---
+title: "Star Payments"
+description: "Accept Telegram star payments and handle refunds"
+---
+
+## Overview
+
+This example demonstrates how to create payment invoices, handle pre-checkout queries, process successful payments, and issue refunds using Telegram Stars.
+
+## Code
+
+```go
+package examples
+
+import (
+	"fmt"
+
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+var paidUsers = make(map[int64]int32)
+
+func main() {
+	bot, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:   123456,
+		AppHash: "YOUR_APP_HASH",
+	})
+
+	// Connect to Telegram
+	bot.Conn()
+	
+	// Authenticate as bot
+	bot.LoginBot("YOUR_BOT_TOKEN")
+
+	// Handle pre-checkout queries (before payment is processed)
+	bot.AddRawHandler(&telegram.UpdateBotPrecheckoutQuery{}, preCheckoutQueryUpd)
+	
+	// Handle successful payments (invoice receipt received)
+	bot.On("edit", func(m *telegram.NewMessage) error {
+		paidUsers[m.SenderID()] = m.Invoice().ReceiptMsgID
+		return bot.E(m.Respond("Payment Successful!"))
+	}, telegram.FilterFunc(func(upd *telegram.NewMessage) bool {
+		return upd.Invoice() != nil && upd.Invoice().ReceiptMsgID != 0
+	}))
+
+	// Command handlers
+	bot.On("message:pay", payCmd)        // /pay - Send invoice
+	bot.On("message:status", statusCmd)  // /status - Check payment status
+	bot.On("message:refund", refundCmd)  // /refund - Refund payment
+	
+	bot.Idle()
+}
+
+// Send payment invoice to user
+func payCmd(m *telegram.NewMessage) error {
+	invoice := telegram.InputMediaInvoice{
+		Title:       "Test Product",
+		Description: "Test Description",
+		Payload:     []byte(""),
+		Invoice: &telegram.Invoice{
+			Test:     true, // Test mode (no real payment)
+			Currency: "USD",
+			Prices: []*telegram.LabeledPrice{
+				{
+					Amount: 1,      // Amount in stars
+					Label:  "1 USD",
+				},
+			},
+		},
+		ProviderData: &telegram.DataJson{},
+	}
+
+	m.ReplyMedia(&invoice)
+	return nil
+}
+
+// Handle pre-checkout query (validate payment before processing)
+func preCheckoutQueryUpd(upd telegram.Update, c *telegram.Client) error {
+	_upd := upd.(*telegram.UpdateBotPrecheckoutQuery)
+	
+	// Approve the payment
+	c.MessagesSetBotPrecheckoutResults(true, _upd.QueryID, "Success")
+	return nil
+}
+
+// Check if user has paid
+func statusCmd(m *telegram.NewMessage) error {
+	if _, ok := paidUsers[m.SenderID()]; ok {
+		return m.E(m.Respond("You have paid!"))
+	}
+	return m.E(m.Respond("You have not paid!"))
+}
+
+// Refund user's payment
+func refundCmd(m *telegram.NewMessage) error {
+	if recpt_id, ok := paidUsers[m.SenderID()]; ok {
+		delete(paidUsers, m.SenderID())
+		
+		// Get user object for refund
+		u, _ := m.Client.GetSendableUser(m.SenderID())
+		
+		// Issue refund
+		m.Client.PaymentsRefundStarsCharge(u, fmt.Sprintf("%d", recpt_id))
+		
+		return m.E(m.Respond("Refund Successful!"))
+	}
+	return m.E(m.Respond("You have not paid!"))
+}
+```
+
+## How It Works
+
+1. **Send Invoice**: User sends `/pay`, bot replies with payment invoice
+2. **Pre-Checkout**: Before payment, `UpdateBotPrecheckoutQuery` is triggered for validation
+3. **Process Payment**: Bot approves/declines pre-checkout query
+4. **Receipt**: On successful payment, invoice message is edited with receipt
+5. **Track Payment**: Store receipt ID in `paidUsers` map
+6. **Refund**: User can request refund via `/refund` command
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` and `YOUR_BOT_TOKEN` with your credentials
+2. Start the bot
+3. Send `/pay` to receive an invoice
+4. Click "Pay" and complete the payment
+5. Send `/status` to check payment status
+6. Send `/refund` to request a refund
+
+<Warning>
+**Test Mode**: Set `Invoice.Test = true` for testing without real payments. Switch to `false` for production.
+</Warning>
+
+<Note>
+**Provider Token**: For real payments, you need to set up a payment provider through [@BotFather](https://t.me/BotFather) using `/setpaymentprovider`.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Star Gifts" icon="gift" href="/examples/gifts">
+    Send and receive Telegram star gifts
+  </Card>
+  <Card title="Bot Keyboards" icon="keyboard" href="/examples/bot-keyboards">
+    Create interactive payment confirmations
+  </Card>
+</CardGroup>

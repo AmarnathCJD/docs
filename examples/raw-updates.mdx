@@ -1,0 +1,132 @@
+---
+title: "Raw Updates"
+description: "Handle raw Telegram updates directly"
+---
+
+## Overview
+
+This example shows how to handle raw Telegram updates using `AddRawHandler()` or `client.On()` with update types for low-level update processing.
+
+## Code
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:   6,
+		AppHash: "YOUR_APP_HASH",
+	})
+	
+	client.Login("+1234567890")
+
+	// Method 1: Using On() with update type
+	client.On(&telegram.UpdateChannelParticipant{}, func(m telegram.Update, c *telegram.Client) error {
+		upd := m.(*telegram.UpdateChannelParticipant)
+		fmt.Println("Channel Participant Update:", upd)
+		
+		// Access update fields
+		fmt.Printf("Channel ID: %d\n", upd.ChannelID)
+		fmt.Printf("User ID: %d\n", upd.UserID)
+		fmt.Printf("Date: %d\n", upd.Date)
+		
+		return nil
+	})
+	
+	// Method 2: Using AddRawHandler
+	client.AddRawHandler(&telegram.UpdateUserStatus{}, handleUserStatus)
+	client.AddRawHandler(&telegram.UpdateChatParticipant{}, handleChatParticipant)
+	client.AddRawHandler(&telegram.UpdateBotPrecheckoutQuery{}, handlePrecheckout)
+
+	client.Idle()
+}
+
+// Handle user online/offline status
+func handleUserStatus(upd telegram.Update, c *telegram.Client) error {
+	status := upd.(*telegram.UpdateUserStatus)
+	
+	fmt.Printf("User %d status: %v\n", status.UserID, status.Status)
+	
+	// Check status type
+	switch s := status.Status.(type) {
+	case *telegram.UserStatusOnline:
+		fmt.Printf("User %d is online until %d\n", status.UserID, s.Expires)
+	case *telegram.UserStatusOffline:
+		fmt.Printf("User %d was last seen at %d\n", status.UserID, s.WasOnline)
+	case *telegram.UserStatusRecently:
+		fmt.Println("User was online recently")
+	case *telegram.UserStatusLastWeek:
+		fmt.Println("User was online last week")
+	case *telegram.UserStatusLastMonth:
+		fmt.Println("User was online last month")
+	}
+	
+	return nil
+}
+
+// Handle chat participant changes
+func handleChatParticipant(upd telegram.Update, c *telegram.Client) error {
+	participant := upd.(*telegram.UpdateChatParticipant)
+	
+	fmt.Printf("Chat %d participant update\n", participant.ChatID)
+	fmt.Printf("User: %d\n", participant.UserID)
+	fmt.Printf("Date: %d\n", participant.Date)
+	
+	return nil
+}
+
+// Handle pre-checkout queries
+func handlePrecheckout(upd telegram.Update, c *telegram.Client) error {
+	query := upd.(*telegram.UpdateBotPrecheckoutQuery)
+	
+	fmt.Printf("Pre-checkout query from user %d\n", query.UserID)
+	fmt.Printf("Total amount: %d %s\n", query.TotalAmount, query.Currency)
+	
+	// Approve payment
+	c.MessagesSetBotPrecheckoutResults(true, query.QueryID, "")
+	
+	return nil
+}
+```
+
+## How It Works
+
+1. **Register Handler**: Use `client.On(&UpdateType{}, handler)` or `AddRawHandler(&UpdateType{}, handler)`
+2. **Receive Update**: Handler is called when matching update arrives
+3. **Type Assertion**: Cast `telegram.Update` to specific update type
+4. **Process Update**: Access update fields and perform actions
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` with your app hash
+2. Replace `+1234567890` with your phone number
+3. Run the program
+4. Perform actions in Telegram to trigger updates:
+   - Join/leave channels to trigger participant updates
+   - View user profiles to see status updates
+   - Send messages to trigger typing updates
+
+<Note>
+**Update Types**: Not all update types are documented. Explore `telegram` package for available update types.
+</Note>
+
+<Tip>
+Use raw handlers when you need access to low-level update data that isn't exposed through high-level handlers like `On("message")`.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Handlers" icon="code" href="/handlers">
+    Learn about high-level event handlers
+  </Card>
+  <Card title="Filters" icon="filter" href="/handlers/filters">
+    Filter updates efficiently
+  </Card>
+</CardGroup>

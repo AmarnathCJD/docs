@@ -1,0 +1,224 @@
+---
+title: "Get Dialogs"
+description: "Fetch all your chats and conversations"
+---
+
+## Overview
+
+This example shows how to retrieve all your dialogs (chats, groups, channels) with pagination and filtering options.
+
+## Code
+
+```go
+package main
+
+import (
+	"fmt"
+
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+	// Create a new Telegram client
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:   6,
+		AppHash: "YOUR_APP_HASH",
+	})
+	
+	// Login with your phone number
+	client.Login("+1234567890")
+	
+	// Get first 5 dialogs
+	dialogs, _ := client.GetDialogs(&telegram.DialogOptions{
+		Limit: 5, // Fetch only 5 dialogs
+	})
+
+	// Alternative: Use IterDialogs() for iterating through all dialogs
+	// diagsChan, errChan := client.IterDialogs()
+	
+	// Print each dialog's ID
+	for _, dialog := range dialogs {
+		fmt.Printf("Dialog: %+v\n", dialog.GetID())
+	}
+	
+	// Keep the client running
+	client.Idle()
+}
+```
+
+## How It Works
+
+1. **Authentication**: Connects using user account credentials
+2. **Fetch Dialogs**: Calls `GetDialogs()` with limit option
+3. **Display Results**: Prints each dialog's ID
+4. **Pagination**: Use DialogOptions to control fetching behavior
+
+## DialogOptions Parameters
+
+<ParamField path="OffsetID" type="int32">
+  Message ID offset for pagination
+</ParamField>
+
+<ParamField path="OffsetDate" type="int32">
+  Date offset for pagination (Unix timestamp)
+</ParamField>
+
+<ParamField path="OffsetPeer" type="InputPeer">
+  Peer offset for pagination
+</ParamField>
+
+<ParamField path="Limit" type="int32">
+  Maximum number of dialogs to fetch
+</ParamField>
+
+<ParamField path="ExcludePinned" type="bool">
+  Exclude pinned dialogs from results
+</ParamField>
+
+<ParamField path="FolderID" type="int32">
+  Fetch dialogs from specific folder (0 = main, 1 = archived)
+</ParamField>
+
+<ParamField path="Hash" type="int64">
+  Hash for caching purposes
+</ParamField>
+
+<ParamField path="SleepThresholdMs" type="int32">
+  Sleep threshold in milliseconds for rate limiting
+</ParamField>
+
+## Practical Examples
+
+<Tabs>
+<Tab title="Get All Dialogs">
+```go
+// Get all dialogs with detailed information
+dialogs, _ := client.GetDialogs(&telegram.DialogOptions{
+	Limit: 100, // Fetch 100 dialogs at a time
+})
+
+for _, dialog := range dialogs {
+	fmt.Printf("ID: %d, Type: %s\n", dialog.GetID(), dialog.GetType())
+}
+```
+</Tab>
+
+<Tab title="Iterate All Dialogs">
+```go
+// Use IterDialogs for memory-efficient iteration
+diagsChan, errChan := client.IterDialogs()
+
+for {
+	select {
+	case dialog := <-diagsChan:
+		if dialog == nil {
+			goto done
+		}
+		fmt.Printf("Dialog: %s (ID: %d)\n", dialog.GetTitle(), dialog.GetID())
+	case err := <-errChan:
+		if err != nil {
+			fmt.Println("Error:", err)
+			goto done
+		}
+	}
+}
+done:
+fmt.Println("Done fetching dialogs")
+```
+</Tab>
+
+<Tab title="Exclude Pinned">
+```go
+// Get dialogs excluding pinned chats
+dialogs, _ := client.GetDialogs(&telegram.DialogOptions{
+	Limit:         50,
+	ExcludePinned: true, // Skip pinned dialogs
+})
+
+for _, dialog := range dialogs {
+	fmt.Printf("Unpinned: %s\n", dialog.GetTitle())
+}
+```
+</Tab>
+
+<Tab title="Archived Dialogs">
+```go
+// Get dialogs from archived folder
+archived, _ := client.GetDialogs(&telegram.DialogOptions{
+	Limit:    50,
+	FolderID: 1, // 1 = archived folder
+})
+
+fmt.Printf("Archived chats: %d\n", len(archived))
+for _, dialog := range archived {
+	fmt.Printf("Archived: %s\n", dialog.GetTitle())
+}
+```
+</Tab>
+
+<Tab title="Dialog Details">
+```go
+// Get detailed information from each dialog
+dialogs, _ := client.GetDialogs(&telegram.DialogOptions{Limit: 10})
+
+for _, dialog := range dialogs {
+	fmt.Printf("Title: %s\n", dialog.GetTitle())
+	fmt.Printf("ID: %d\n", dialog.GetID())
+	fmt.Printf("Type: %s\n", dialog.GetType())
+	fmt.Printf("Unread: %d\n", dialog.GetUnreadCount())
+	fmt.Println("---")
+}
+```
+</Tab>
+</Tabs>
+
+## Using IterDialogs
+
+For large dialog lists, use `IterDialogs()` to avoid loading everything into memory:
+
+```go
+diagsChan, errChan := client.IterDialogs()
+
+count := 0
+for {
+	select {
+	case dialog := <-diagsChan:
+		if dialog == nil {
+			goto complete
+		}
+		
+		count++
+		fmt.Printf("%d. %s (ID: %d)\n", count, dialog.GetTitle(), dialog.GetID())
+		
+	case err := <-errChan:
+		if err != nil {
+			fmt.Println("Error fetching dialogs:", err)
+			goto complete
+		}
+	}
+}
+
+complete:
+fmt.Printf("\nTotal dialogs: %d\n", count)
+```
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` with your actual app hash from [my.telegram.org](https://my.telegram.org)
+2. Replace `+1234567890` with your phone number
+3. Run the program
+
+<Note>
+This requires a **user account**. Bots can only see dialogs where they are members.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Get Chat Members" icon="users" href="/examples/get-chat-members">
+    Retrieve members from groups and channels
+  </Card>
+  <Card title="Get History" icon="clock-rotate-left" href="/examples/get-history">
+    Fetch message history from chats
+  </Card>
+</CardGroup>

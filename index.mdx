@@ -1,10 +1,17 @@
 ---
 title: "Gogram"
 description: "Modern, elegant MTProto API framework for Go"
+icon: "code"
 ---
 
 <img
-  className="block"
+  className="block dark:hidden"
+  src="/images/RE1M0sM.png"
+  alt="Gogram Logo"
+  width="200"
+/>
+<img
+  className="hidden dark:block"
   src="/images/RE1M0sM.png"
   alt="Gogram Logo"
   width="200"
@@ -125,10 +132,18 @@ func main() {
   <Card
     title="API Methods"
     icon="terminal"
-    href="/api"
+    href="/invoke"
     horizontal
   >
     Explore available methods and features.
+  </Card>
+  <Card
+    title="TL Reference"
+    icon="book-open"
+    href="https://tl.gogram.fun"
+    horizontal
+  >
+    Complete Telegram Layer (TL) schema reference.
   </Card>
   <Card
     title="Examples"
@@ -139,6 +154,26 @@ func main() {
     View complete examples and use cases.
   </Card>
 </CardGroup>
+
+## Why Gogram?
+
+<AccordionGroup>
+  <Accordion title="Pure Go Implementation" icon="golang">
+    Written entirely in Go with no external dependencies. Native MTProto implementation means you get full access to Telegram's features without limitations.
+  </Accordion>
+  
+  <Accordion title="Type-Safe & Modern" icon="shield-check">
+    Leverages Go 1.18+ generics for compile-time type safety. Clean, intuitive API design that follows Go best practices.
+  </Accordion>
+  
+  <Accordion title="High Performance" icon="bolt">
+    Built for concurrent operations with goroutines. Efficient connection pooling and automatic flood control. Optimized for both bots and user clients.
+  </Accordion>
+  
+  <Accordion title="Feature Complete" icon="stars">
+    Full MTProto protocol support including file transfers, media handling, inline bots, payments, and all Telegram features. Regular updates to support new Telegram features.
+  </Accordion>
+</AccordionGroup>
 
 ## Features
 

@@ -1,0 +1,285 @@
+---
+title: "Inline Queries"
+description: "Handle inline bot queries and return results"
+---
+
+## Overview
+
+This example demonstrates how to handle inline queries when users type `@yourbot query` in any chat.
+
+## Code
+
+```go
+package examples
+
+import (
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+const (
+	appID    = 6
+	appHash  = "YOUR_APP_HASH"
+	botToken = "YOUR_BOT_TOKEN"
+)
+
+func main() {
+	// Create a new client
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:    appID,
+		AppHash:  appHash,
+		LogLevel: telegram.LogInfo,
+	})
+
+	// Connect to the server
+	if err := client.Connect(); err != nil {
+		panic(err)
+	}
+
+	// Authenticate the client using the bot token
+	if err := client.LoginBot(botToken); err != nil {
+		panic(err)
+	}
+
+	// Add an inline query handler
+	client.AddInlineHandler(telegram.OnInlineQuery, HelloWorld)
+
+	// Start polling for updates
+	client.Idle()
+}
+
+// HelloWorld handles inline queries
+func HelloWorld(i *telegram.InlineQuery) error {
+	// Create a result builder
+	builder := i.Builder()
+	
+	// Add an article result
+	builder.Article("Hello World", "Hello World", "This is a test article")
+	
+	// Answer the query with built results
+	_, err := i.Answer(builder.Results())
+	return err
+}
+```
+
+## How It Works
+
+1. **Bot Setup**: Creates client and authenticates with bot token
+2. **Handler Registration**: Adds inline query handler with `AddInlineHandler()`
+3. **Query Processing**: Receives inline query when user types `@yourbot` in any chat
+4. **Build Results**: Uses `Builder()` to create result objects
+5. **Send Response**: Calls `Answer()` to send results back to user
+
+## Result Types
+
+<Tabs>
+<Tab title="Article">
+```go
+func HandleInline(i *telegram.InlineQuery) error {
+	builder := i.Builder()
+	
+	// Simple article result
+	builder.Article(
+		"Title",           // Title shown in results
+		"Description",     // Description text
+		"Message content", // Content sent when selected
+	)
+	
+	_, err := i.Answer(builder.Results())
+	return err
+}
+```
+</Tab>
+
+<Tab title="Photo">
+```go
+func PhotoResult(i *telegram.InlineQuery) error {
+	builder := i.Builder()
+	
+	// Photo result from URL
+	builder.Photo(
+		"https://example.com/photo.jpg", // Photo URL
+		"Photo caption",                 // Caption
+	)
+	
+	// Photo with thumbnail
+	builder.PhotoWithThumb(
+		"https://example.com/photo.jpg",
+		"https://example.com/thumb.jpg", // Thumbnail URL
+		"Photo caption",
+	)
+	
+	_, err := i.Answer(builder.Results())
+	return err
+}
+```
+</Tab>
+
+<Tab title="Document">
+```go
+func DocumentResult(i *telegram.InlineQuery) error {
+	builder := i.Builder()
+	
+	// Document/file result
+	builder.Document(
+		"https://example.com/file.pdf", // File URL
+		"File.pdf",                     // File name
+		"PDF Document",                 // Description
+	)
+	
+	_, err := i.Answer(builder.Results())
+	return err
+}
+```
+</Tab>
+
+<Tab title="Multiple Results">
+```go
+func MultipleResults(i *telegram.InlineQuery) error {
+	builder := i.Builder()
+	
+	// Add multiple results
+	builder.Article("Result 1", "First result", "Content 1")
+	builder.Article("Result 2", "Second result", "Content 2")
+	builder.Photo("https://example.com/photo1.jpg", "Photo 1")
+	builder.Photo("https://example.com/photo2.jpg", "Photo 2")
+	
+	_, err := i.Answer(builder.Results())
+	return err
+}
+```
+</Tab>
+
+<Tab title="Search-Based">
+```go
+func SearchInline(i *telegram.InlineQuery) error {
+	query := i.Query // User's search query
+	builder := i.Builder()
+	
+	// Return results based on query
+	if query == "" {
+		builder.Article("Help", "Search for something", "Type a query to search")
+	} else {
+		builder.Article(
+			"Search: "+query,
+			"You searched for: "+query,
+			"Results for: "+query,
+		)
+	}
+	
+	_, err := i.Answer(builder.Results())
+	return err
+}
+```
+</Tab>
+</Tabs>
+
+## Answer Options
+
+Customize inline query responses with `AnswerOptions`:
+
+```go
+func CustomAnswer(i *telegram.InlineQuery) error {
+	builder := i.Builder()
+	builder.Article("Result", "Description", "Content")
+	
+	_, err := i.Answer(builder.Results(), &telegram.AnswerOptions{
+		CacheTime:  300,  // Cache results for 5 minutes
+		IsPersonal: true, // Results are user-specific
+		NextOffset: "10", // Pagination offset for next results
+		SwitchPM: &telegram.InlineSwitchPM{ // "Switch to PM" button
+			Text:  "Open bot in PM",
+			Param: "start",
+		},
+	})
+	
+	return err
+}
+```
+
+## InlineQuery Properties
+
+Access query information:
+
+```go
+func DetailedHandler(i *telegram.InlineQuery) error {
+	// Query information
+	fmt.Println("Query:", i.Query)         // User's search query
+	fmt.Println("User ID:", i.From.ID)     // User who sent query
+	fmt.Println("Offset:", i.Offset)       // Pagination offset
+	fmt.Println("Chat Type:", i.ChatType)  // Where query was made
+	
+	builder := i.Builder()
+	builder.Article("Info", "Query details", fmt.Sprintf("You searched: %s", i.Query))
+	
+	_, err := i.Answer(builder.Results())
+	return err
+}
+```
+
+## Pagination Example
+
+Handle large result sets with pagination:
+
+```go
+func PaginatedResults(i *telegram.InlineQuery) error {
+	offset := 0
+	if i.Offset != "" {
+		// Parse offset from string
+		fmt.Sscanf(i.Offset, "%d", &offset)
+	}
+	
+	builder := i.Builder()
+	
+	// Add 10 results starting from offset
+	for j := offset; j < offset+10; j++ {
+		builder.Article(
+			fmt.Sprintf("Result %d", j+1),
+			fmt.Sprintf("Description %d", j+1),
+			fmt.Sprintf("Content %d", j+1),
+		)
+	}
+	
+	// Set next offset for pagination
+	nextOffset := fmt.Sprintf("%d", offset+10)
+	
+	_, err := i.Answer(builder.Results(), &telegram.AnswerOptions{
+		NextOffset: nextOffset,
+	})
+	
+	return err
+}
+```
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` and `YOUR_BOT_TOKEN` with your credentials
+2. **Enable inline mode** for your bot:
+   - Message [@BotFather](https://t.me/BotFather)
+   - Send `/setinline`
+   - Select your bot
+   - Provide a placeholder text (e.g., "Search...")
+3. **Optional**: Enable inline feedback:
+   - Send `/setinlinefeedback` to @BotFather
+   - Select your bot
+   - Choose "Enabled"
+4. Run the program
+5. In any chat, type `@yourbot hello` to trigger inline query
+
+<Note>
+**Important**: Your bot must have inline mode enabled via @BotFather. Without this, users cannot trigger inline queries.
+</Note>
+
+<Tip>
+Use inline feedback to track which results users select. This helps optimize your inline results based on user behavior.
+</Tip>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Callback Queries" icon="hand-pointer" href="/examples/callback-queries">
+    Handle button clicks in messages
+  </Card>
+  <Card title="Bot Keyboards" icon="keyboard" href="/examples/bot-keyboards">
+    Create interactive keyboards
+  </Card>
+</CardGroup>

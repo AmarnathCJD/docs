@@ -51,12 +51,14 @@
               "examples/get-history",
               "examples/get-chat-members",
               "examples/get-dialogs",
-              "examples/callback-queries",
               "examples/inline-queries",
               "examples/using-inline-bots",
               "examples/bot-keyboards",
-              "examples/raw-updates",
-              "examples/basic-bot"
+              "examples/conversation",
+              "examples/broadcast",
+              "examples/gifts",
+              "examples/stars",
+              "examples/raw-updates"
             ]
           },
           {
@@ -70,6 +72,11 @@
     ],
     "global": {
       "anchors": [
+        {
+          "anchor": "TL Reference",
+          "href": "https://tl.gogram.fun",
+          "icon": "book"
+        },
         {
           "anchor": "GitHub",
           "href": "https://github.com/amarnathcjd/gogram",
@@ -85,6 +92,10 @@
   },
   "navbar": {
     "links": [
+      {
+        "label": "TL Reference",
+        "href": "https://tl.gogram.fun"
+      },
       {
         "label": "Support",
         "href": "https://t.me/gogrammers"

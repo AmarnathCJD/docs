@@ -1,0 +1,344 @@
+---
+title: "Star Gifts"
+description: "Send and receive Telegram star gifts"
+---
+
+## Overview
+
+This example shows how to send star gifts to users, buy new gifts, and handle gift receipts.
+
+## Code
+
+```go
+package examples
+
+import (
+	"fmt"
+
+	"github.com/amarnathcjd/gogram/telegram"
+)
+
+const (
+	appID    = 6
+	appHash  = "YOUR_APP_HASH"
+	phoneNum = "YOUR_PHONE_NUMBER"
+)
+
+func main() {
+	// Create client
+	client, _ := telegram.NewClient(telegram.ClientConfig{
+		AppID:   appID,
+		AppHash: appHash,
+	})
+	
+	// Connect to Telegram
+	client.Conn()
+	
+	// Authenticate (prompts for phone/code/password)
+	client.AuthPrompt()
+
+	// Get all your unique gifts and send the first one to a user
+	gifts, _ := client.GetMyGifts(true) // true = unique gifts only
+	for _, gift := range gifts {
+		gft := (*gift).(*telegram.StarGiftUnique)
+
+		// Transfer the gift to the user
+		client.SendGift("roseloverx", gft.ID, "Here is a gift for you!")
+
+		break
+	}
+
+	// Buying new gifts and sending them to users
+	availGifts, _ := client.PaymentsGetStarGifts(0) // 0 = get all available gifts
+	for _, gift := range availGifts.(*telegram.PaymentsStarGiftsObj).Gifts {
+		gft := gift.(*telegram.StarGiftObj)
+
+		// Buy and send the gift
+		client.SendNewGift("roseloverx", gft.ID, "Here is a gift for you!")
+
+		break
+	}
+
+	// Add a handler for receiving gifts
+	client.AddActionHandler(func(m *telegram.NewMessage) error {
+		// Check for regular star gift
+		if action, ok := m.Action.(*telegram.MessageActionStarGift); ok {
+			fmt.Println("Gift received", action.Gift)
+		} else if action, ok := m.Action.(*telegram.MessageActionStarGiftUnique); ok {
+			// Check for unique star gift
+			fmt.Println("Unique gift received", action.Gift)
+		}
+
+		return nil
+	})
+}
+```
+
+## How It Works
+
+1. **Get Owned Gifts**: `GetMyGifts()` retrieves your gift inventory
+2. **Send Owned Gift**: `SendGift()` transfers a gift from your inventory
+3. **Buy New Gift**: `PaymentsGetStarGifts()` lists available gifts to purchase
+4. **Send New Gift**: `SendNewGift()` purchases and sends in one step
+5. **Receive Gifts**: `AddActionHandler()` handles incoming gift messages
+
+## Gift Types
+
+<Tabs>
+<Tab title="Unique Gifts">
+```go
+// Get only unique (limited edition) gifts
+uniqueGifts, _ := client.GetMyGifts(true)
+
+for _, gift := range uniqueGifts {
+	gft := (*gift).(*telegram.StarGiftUnique)
+	
+	fmt.Printf("Unique Gift ID: %d\n", gft.ID)
+	fmt.Printf("Title: %s\n", gft.Title)
+	fmt.Printf("Number: %d\n", gft.Number) // Edition number
+	
+	// Send unique gift
+	client.SendGift("username", gft.ID, "Special gift for you!")
+}
+```
+</Tab>
+
+<Tab title="Regular Gifts">
+```go
+// Get all gifts (including regular ones)
+allGifts, _ := client.GetMyGifts(false)
+
+for _, gift := range allGifts {
+	// Check gift type
+	if gft, ok := (*gift).(*telegram.StarGiftObj); ok {
+		fmt.Printf("Regular Gift ID: %d\n", gft.ID)
+		fmt.Printf("Stars: %d\n", gft.Stars) // Cost in stars
+		
+		client.SendGift("username", gft.ID, "Gift for you!")
+	}
+}
+```
+</Tab>
+
+<Tab title="Available Gifts">
+```go
+// Get gifts available for purchase
+available, _ := client.PaymentsGetStarGifts(0)
+gifts := available.(*telegram.PaymentsStarGiftsObj).Gifts
+
+for _, gift := range gifts {
+	gft := gift.(*telegram.StarGiftObj)
+	
+	fmt.Printf("Gift: %s\n", gft.ID)
+	fmt.Printf("Price: %d stars\n", gft.Stars)
+	fmt.Printf("Available: %t\n", gft.Available)
+	
+	// Buy and send
+	if gft.Available {
+		client.SendNewGift("username", gft.ID, "New gift!")
+	}
+}
+```
+</Tab>
+
+<Tab title="Gift with Limit">
+```go
+// Get limited number of available gifts
+limited, _ := client.PaymentsGetStarGifts(10) // Get first 10 gifts
+
+gifts := limited.(*telegram.PaymentsStarGiftsObj).Gifts
+fmt.Printf("Showing %d available gifts\n", len(gifts))
+
+for _, gift := range gifts {
+	gft := gift.(*telegram.StarGiftObj)
+	fmt.Printf("- %s (%d stars)\n", gft.ID, gft.Stars)
+}
+```
+</Tab>
+</Tabs>
+
+## Sending Gifts
+
+<Tabs>
+<Tab title="Send Owned Gift">
+```go
+// Transfer a gift from your inventory
+func SendOwnedGift(client *telegram.Client, recipient string) {
+	gifts, _ := client.GetMyGifts(false)
+	
+	if len(gifts) == 0 {
+		fmt.Println("No gifts to send!")
+		return
+	}
+	
+	// Send first available gift
+	gft := (*gifts[0]).(*telegram.StarGiftObj)
+	_, err := client.SendGift(recipient, gft.ID, "A gift from me to you! 🎁")
+	
+	if err != nil {
+		fmt.Println("Error sending gift:", err)
+	} else {
+		fmt.Println("Gift sent successfully!")
+	}
+}
+```
+</Tab>
+
+<Tab title="Buy and Send">
+```go
+// Purchase and send a new gift in one step
+func BuyAndSendGift(client *telegram.Client, recipient string, giftID int64) {
+	_, err := client.SendNewGift(recipient, giftID, "Here's a special gift! ⭐")
+	
+	if err != nil {
+		fmt.Println("Error buying/sending gift:", err)
+	} else {
+		fmt.Println("Gift purchased and sent!")
+	}
+}
+```
+</Tab>
+
+<Tab title="Send to Multiple Users">
+```go
+// Send gifts to multiple recipients
+func SendGiftToMany(client *telegram.Client, recipients []string, giftID int64) {
+	for _, recipient := range recipients {
+		_, err := client.SendNewGift(recipient, giftID, "You're awesome! 🎁")
+		
+		if err != nil {
+			fmt.Printf("Failed to send to %s: %v\n", recipient, err)
+		} else {
+			fmt.Printf("Sent to %s ✓\n", recipient)
+		}
+		
+		// Rate limiting
+		time.Sleep(1 * time.Second)
+	}
+}
+```
+</Tab>
+
+<Tab title="Send Cheapest Gift">
+```go
+// Find and send the cheapest available gift
+func SendCheapestGift(client *telegram.Client, recipient string) {
+	available, _ := client.PaymentsGetStarGifts(0)
+	gifts := available.(*telegram.PaymentsStarGiftsObj).Gifts
+	
+	var cheapest *telegram.StarGiftObj
+	minStars := int64(999999)
+	
+	for _, gift := range gifts {
+		gft := gift.(*telegram.StarGiftObj)
+		if gft.Available && gft.Stars < minStars {
+			minStars = gft.Stars
+			cheapest = gft
+		}
+	}
+	
+	if cheapest != nil {
+		client.SendNewGift(recipient, cheapest.ID, "A small gift! 🎁")
+		fmt.Printf("Sent gift costing %d stars\n", cheapest.Stars)
+	}
+}
+```
+</Tab>
+</Tabs>
+
+## Receiving Gifts
+
+Handle incoming gifts with action handlers:
+
+```go
+client.AddActionHandler(func(m *telegram.NewMessage) error {
+	// Handle regular star gift
+	if action, ok := m.Action.(*telegram.MessageActionStarGift); ok {
+		gft := action.Gift.(*telegram.StarGiftObj)
+		
+		fmt.Printf("Received gift from %s\n", m.Sender.FirstName)
+		fmt.Printf("Gift ID: %d\n", gft.ID)
+		fmt.Printf("Stars: %d\n", gft.Stars)
+		fmt.Printf("Message: %s\n", action.Message)
+		
+		// Thank the sender
+		m.Reply("Thank you for the gift! 🎁")
+		
+		// Or send a gift back
+		client.SendGift(m.SenderID(), gft.ID, "A gift for a gift! 🎁")
+	}
+	
+	// Handle unique star gift
+	if action, ok := m.Action.(*telegram.MessageActionStarGiftUnique); ok {
+		gft := action.Gift.(*telegram.StarGiftUnique)
+		
+		fmt.Printf("Received UNIQUE gift #%d\n", gft.Number)
+		fmt.Printf("Title: %s\n", gft.Title)
+		
+		m.Reply("Wow, a unique gift! Thank you! ⭐")
+	}
+	
+	return nil
+})
+```
+
+## Gift Stats Tracking
+
+Track gift statistics:
+
+```go
+func TrackGiftStats(client *telegram.Client) {
+	giftsReceived := 0
+	giftsSent := 0
+	totalStarsReceived := int64(0)
+	
+	client.AddActionHandler(func(m *telegram.NewMessage) error {
+		if action, ok := m.Action.(*telegram.MessageActionStarGift); ok {
+			giftsReceived++
+			totalStarsReceived += action.Gift.(*telegram.StarGiftObj).Stars
+			
+			fmt.Printf("Stats: %d received, %d stars total\n", 
+				giftsReceived, totalStarsReceived)
+		}
+		return nil
+	})
+	
+	// Track sent gifts
+	originalSend := client.SendGift
+	client.SendGift = func(peer interface{}, giftID int64, message string) error {
+		err := originalSend(peer, giftID, message)
+		if err == nil {
+			giftsSent++
+			fmt.Printf("Gifts sent: %d\n", giftsSent)
+		}
+		return err
+	}
+}
+```
+
+## Running the Example
+
+1. Replace `YOUR_APP_HASH` and `YOUR_PHONE_NUMBER` with your credentials
+2. Replace `"roseloverx"` with target username
+3. Run the program
+4. Follow authentication prompts (phone code, 2FA if enabled)
+5. Gifts will be sent automatically
+
+<Note>
+**Star Balance**: Sending new gifts requires Telegram Stars in your account balance. You can purchase stars in the Telegram app.
+</Note>
+
+<Warning>
+**Rate Limits**: Don't send gifts too quickly to avoid rate limiting. Add delays between sends.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Conversations" icon="comments" href="/examples/conversation">
+    Create multi-step conversations
+  </Card>
+  <Card title="Echo Bot" icon="reply" href="/examples/echo-bot">
+    Build a simple message handler
+  </Card>
+</CardGroup>
