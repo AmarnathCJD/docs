@@ -1,0 +1,392 @@
+---
+title: "Peer Cache"
+description: "Understanding and configuring Gogram's caching system"
+---
+
+## Overview
+
+Gogram includes a built-in caching system that stores peer information (users, channels, chats) to avoid repeatedly fetching the same data from Telegram servers. This improves performance and reduces API calls.
+
+<Note>
+  **Why caching is necessary:** Telegram sometimes assumes you already have the access hash for a peer and sends "min" constructors instead, which lack the access hash needed to interact with that peer. The cache stores full peer information to prevent this issue.
+</Note>
+
+## What Gets Cached?
+
+The cache stores:
+
+- **Users** - User IDs and access hashes
+- **Channels** - Channel IDs and access hashes
+- **Chats** - Basic chat information
+- **Usernames** - Username to ID mappings
+
+## Cache Modes
+
+- **File-Based Cache (Default)** - Persists cache to disk
+- **Memory-Only Cache** - Cache cleared on exit
+- **Disabled Cache** - No caching (cached for 20 seconds then cleared, for lib functionality)
+
+## Custom Cache Configuration
+
+### Using NewCache
+
+Create a cache with custom configuration:
+
+```go
+import "github.com/amarnathcjd/gogram/telegram"
+
+cache := telegram.NewCache("my_cache.dat", &telegram.CacheConfig{
+    MaxSize:  1000,              // Limit cache to 1000 entries
+    LogLevel: telegram.DebugLevel, // Enable debug logging
+    LogColor: true,               // Colored logs
+    Memory:   false,              // Save to file
+    Disabled: false,              // Cache enabled
+})
+
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+    Cache:   cache, // Use custom cache
+})
+```
+
+## Cache Configuration Options
+
+<ParamField path="MaxSize" type="int" default="0">
+  Maximum number of users/channels to keep in cache. `0` = unlimited.
+  
+  When limit is reached, oldest entries are removed.
+  
+  ```go
+  MaxSize: 5000 // Keep max 5000 entries
+  ```
+</ParamField>
+
+<ParamField path="LogLevel" type="LogLevel" default="InfoLevel">
+  Cache logging level: `DebugLevel`, `InfoLevel`, `WarnLevel`, `ErrorLevel`.
+  
+  ```go
+  LogLevel: telegram.DebugLevel
+  ```
+</ParamField>
+
+<ParamField path="LogColor" type="bool" default="false">
+  Enable colored cache logs.
+  
+  ```go
+  LogColor: true
+  ```
+</ParamField>
+
+<ParamField path="Logger" type="Logger">
+  Custom logger implementation.
+  See [Logger Interface](/logger) for details.
+  ```go
+  Logger: tg.NewLogger(tg.InfoLevel, tg.LoggerConfig{
+      Prefix:     "cache",
+		Color:      true,
+		ShowCaller: true,
+		//ShowFunction:    true,
+		TimestampFormat: "2006-01-02 15:04:05 DST",
+		//JSONOutput:      true,
+		//Output: fi,
+  })
+  ```
+</ParamField>
+
+<ParamField path="Memory" type="bool" default="false">
+  Use memory-only cache (don't persist to file).
+  
+  ```go
+  Memory: true
+  ```
+</ParamField>
+
+<ParamField path="Disabled" type="bool" default="false">
+  Disable the cache entirely.
+  
+  ```go
+  Disabled: true
+  ```
+</ParamField>
+
+## Cache Methods
+
+### Export/Import Cache
+
+Export and import cache data as JSON:
+
+```go
+// Export cache
+jsonData, err := client.Cache.ExportJSON()
+if err != nil {
+    log.Fatal(err)
+}
+
+// Save to database
+database.Save("cache", jsonData)
+
+// Later, import cache
+jsonData := database.Load("cache")
+err := client.Cache.ImportJSON(jsonData)
+```
+
+### Clear Cache
+
+Clear all cached data:
+
+```go
+client.Cache.Clear()
+```
+
+### Check if ID is Cached
+
+```go
+if client.IdInCache(userID) {
+    log.Println("User is in cache")
+}
+```
+
+## Retrieving Cached Data
+
+### Get User
+
+```go
+user, err := client.GetUser(123456789)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Println("User:", user.FirstName, user.LastName)
+```
+
+### Get Channel
+
+```go
+// Channel ID without -100 prefix
+channel, err := client.GetChannel(1234567890)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Println("Channel:", channel.Title)
+```
+
+### Get Chat
+
+```go
+chat, err := client.GetChat(123456789)
+if err != nil {
+    log.Fatal(err)
+}
+
+fmt.Println("Chat:", chat.Title)
+```
+
+### Get Peer (Auto-Detect)
+
+Automatically detects whether ID is a user, channel, or chat:
+
+```go
+peer, err := client.GetPeer(peerID)
+if err != nil {
+    log.Fatal(err)
+}
+
+switch p := peer.(type) {
+case *telegram.UserObj:
+    fmt.Println("User:", p.FirstName)
+case *telegram.Channel:
+    fmt.Println("Channel:", p.Title)
+case *telegram.ChatObj:
+    fmt.Println("Chat:", p.Title)
+}
+```
+
+## Input Peers
+
+Get InputPeer objects for API calls:
+
+```go
+// Get InputPeer (auto-detects type)
+inputPeer, err := client.GetInputPeer(userID)
+
+// Get specific peer types
+userPeer, err := client.GetPeerUser(userID)
+channelPeer, err := client.GetPeerChannel(channelID)
+```
+
+<Tip>
+  InputPeer objects are required for most Telegram API methods. The cache provides these automatically.
+</Tip>
+
+## Channel ID Formats
+
+Gogram handles both channel ID formats:
+
+```go
+// With -100 prefix (standard Telegram format)
+channel, _ := client.GetChannel(-1001234567890)
+
+// Without -100 prefix (internal format)
+channel, _ := client.GetChannel(1234567890)
+```
+
+Both resolve to the same channel.
+
+## Cache Behavior
+
+### Automatic Updates
+
+The cache automatically updates when:
+- Receiving messages
+- Fetching users/channels
+- Getting chat members
+- Any API call that returns user/channel data
+
+### Min Users/Channels
+
+Telegram sometimes returns "min" entities with limited information. The cache:
+- Keeps full data if already cached
+- Only stores min data if no full data exists
+- Doesn't trigger file writes for min entities
+
+### Debounced Writes
+
+Cache writes are debounced to avoid excessive file I/O:
+- Batches updates within 1 second
+- Minimum 2 seconds between writes
+- Asynchronous write operations
+
+## Advanced Usage
+
+### Database Integration
+
+Store cache in your database instead of files:
+
+```go
+// Export cache to JSON
+cacheData, _ := client.Cache.ExportJSON()
+
+// Save to MongoDB/PostgreSQL/etc
+db.Collection("cache").InsertOne(context.Background(), bson.M{
+    "bot_id": botID,
+    "cache":  cacheData,
+})
+
+// On startup, load from database
+var doc struct {
+    Cache json.RawMessage `bson:"cache"`
+}
+db.Collection("cache").FindOne(context.Background(), bson.M{"bot_id": botID}).Decode(&doc)
+client.Cache.ImportJSON(doc.Cache)
+```
+
+### Size-Limited Cache
+
+For bots with millions of users, limit cache size:
+
+```go
+cache := telegram.NewCache("cache.dat", &telegram.CacheConfig{
+    MaxSize: 10000, // Keep only 10k most recent entries
+})
+```
+
+<Note>
+  When the cache reaches `MaxSize`, oldest entries are automatically removed.
+</Note>
+
+### Disable for Stateless Bots
+
+For serverless/stateless bots that don't need persistence:
+
+```go
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:        6,
+    AppHash:      "your_app_hash",
+    DisableCache: true, // No caching at all
+})
+```
+
+## Cache File Structure
+
+The cache file (`cache.dat`) stores:
+
+```go
+type InputPeerCache struct {
+    InputChannels map[int64]int64  // channelID -> accessHash
+    InputUsers    map[int64]int64  // userID -> accessHash
+    UsernameMap   map[string]int64 // username -> ID
+}
+```
+
+File format: Gob-encoded binary
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use File Cache" icon="floppy-disk">
+    Enable file-based cache for persistent bots to avoid re-fetching data.
+  </Card>
+  <Card title="Set Size Limits" icon="gauge">
+    Use `MaxSize` for bots handling millions of users to prevent memory issues.
+  </Card>
+  <Card title="Export for Backup" icon="download">
+    Periodically export cache as JSON for backup or migration.
+  </Card>
+  <Card title="Memory Cache for Workers" icon="server">
+    Use memory-only cache for short-lived worker processes.
+  </Card>
+  <Card title="Monitor Cache Size" icon="chart-line">
+    Enable debug logging to track cache growth and performance.
+  </Card>
+  <Card title="Database Integration" icon="database">
+    For distributed systems, store cache in a shared database.
+  </Card>
+</CardGroup>
+
+## Troubleshooting
+
+### "Missing from cache" Errors
+
+Telegram only sends access hashes when you've interacted with a peer. If you get missing cache errors:
+
+```go
+// For user accounts: Fetch dialogs to populate cache
+dialogs, _ := client.MessagesGetDialogs(&telegram.MessagesGetDialogsParams{
+    Limit: 100,
+})
+
+// Wait for an update from the peer
+// Access hash is automatically cached when you receive messages
+
+// Or resolve the peer if you have username
+peer, _ := client.ResolvePeer("@username")
+```
+
+<Warning>
+  You must have interacted with the peer before (received/sent messages) for Telegram to provide the access hash. The cache can't store what Telegram hasn't sent yet.
+</Warning>
+
+### Cache Not Persisting
+
+Ensure:
+1. `MemoryCache` is `false` (default)
+2. `DisableCache` is `false` (default)
+3. File has write permissions
+4. Program exits gracefully (cache is written on updates)
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="gear" href="/config">
+    Explore all client configuration options
+  </Card>
+  <Card title="Event Handlers" icon="bolt" href="/handlers">
+    Learn about handling updates
+  </Card>
+  <Card title="API Methods" icon="terminal" href="/api">
+    Explore available API methods
+  </Card>
+</CardGroup>

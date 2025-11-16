@@ -1,0 +1,356 @@
+---
+title: "Authentication"
+description: "Learn how to authenticate with Telegram using Gogram"
+---
+
+## Overview
+
+Gogram supports multiple authentication methods to connect to Telegram. You can authenticate as a **bot** using a bot token or as a **user** using a phone number.
+
+## Getting API Credentials
+
+Before you start, you'll need to obtain API credentials from Telegram:
+
+1. Visit [my.telegram.org](https://my.telegram.org)
+2. Log in with your phone number
+3. Navigate to "API development tools"
+4. Create a new application to get your `AppID` and `AppHash`
+
+<Note>Keep your API credentials secure and never share them publicly.</Note>
+
+## Bot Authentication
+
+Authenticate as a bot using a bot token from [@BotFather](https://t.me/botfather).
+
+```go
+package main
+
+import (
+    "log"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    client, err := telegram.NewClient(telegram.ClientConfig{
+        AppID:   6,
+        AppHash: "your_app_hash",
+    })
+
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    // Connect to Telegram
+    client.Conn()
+
+    // Login as bot
+    if err := client.LoginBot("YOUR_BOT_TOKEN"); err != nil {
+        log.Fatal(err)
+    }
+
+    me, err := client.GetMe()
+    if err != nil {
+        panic(error)
+    }
+
+    log.Println(fmt.Sprintf("Logged in as Bot: @%s", me.Username))
+    client.Idle()
+}
+```
+
+## User Authentication
+
+Authenticate as a user account using a phone number.
+
+### Basic Login
+
+```go
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+})
+
+if err != nil {
+    log.Fatal(err)
+}
+
+client.Conn()
+
+// Login with phone number
+if err := client.Login("+1234567890"); err != nil {
+    log.Fatal(err)
+}
+
+fmt.Println(client.GetMe())
+```
+
+### Interactive Login
+
+For an interactive authentication flow with prompts:
+
+```go
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+})
+
+if err != nil {
+    log.Fatal(err)
+}
+
+client.Conn()
+
+// Interactive login with prompts for phone, code, and password
+if err := client.AuthPrompt(); err != nil {
+    log.Fatal(err)
+}
+```
+
+This will start an interactive prompt in the terminal, asking for phone number, code, and 2FA password if enabled.
+
+### Custom Callbacks
+
+You can specify custom callback functions to handle authentication input:
+
+```go
+client.Login("+1234567890", &telegram.LoginOptions{
+	CodeCallback: func() (string, error) {
+		// Custom logic to get the code
+		var code string
+		fmt.Print("Enter code: ")
+		fmt.Scanln(&code)
+		return code, nil
+	},
+	PasswordCallback: func() (string, error) {
+		// Custom logic to get 2FA password
+		var password string
+		fmt.Print("Enter 2FA password: ")
+		fmt.Scanln(&password)
+		return password, nil
+	},
+	MaxRetries: 5, // Max number of retries on invalid otp/ password
+})
+```
+
+## Session Management
+
+Gogram automatically saves your session to avoid re-authentication on every restart.
+Re-authentication is costly and would induce flood waits
+
+### Custom Session Path
+
+```go
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:       6,
+    AppHash:     "your_app_hash",
+    SessionName:     "my_session",  // Custom session name
+    Session: "session.dat",   // Custom session filename or path to use
+    // optional, the key used to encrypt the session file.
+    SessionAESKey: "12345678901234567890123456789012"
+})
+```
+
+<Note>session.dat is the default session file name</Note>
+<Note>If you use more than one account or bot in the same program or directory, make sure their Session or SessionName fields are unique to prevent authentication data from being overwritten.</Note>
+
+### Session String
+
+You can also use session strings for deployment:
+
+```go
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:         6,
+    AppHash:       "your_app_hash",
+    StringSession: "<STRING_SESSION>",
+})
+```
+
+<Tip>
+  Session strings are useful for deploying bots / users on cloud platforms where file
+  persistence isn't guaranteed.
+</Tip>
+
+### Gen String Session
+
+To generate a session string from an existing session file or fresh authentication:
+
+```go
+// After authentication, export session as string
+sessionString := client.ExportSession()
+fmt.Println("Session String:", sessionString)
+```
+
+<Warning>
+  Never share your session string publicly. It provides full access to your account.
+</Warning>
+
+### Custom Store
+
+For advanced use cases, you can implement custom session storage using MongoDB, Redis, or any other database.
+
+The session is represented by the `Session` struct:
+
+```go
+type Session struct {
+    Key      []byte // AUTH_KEY
+    Hash     []byte // AUTH_KEY_HASH (SHA1 of AUTH_KEY)
+    Salt     int64  // SERVER_SALT
+    Hostname string // HOSTNAME (IP address of the DC)
+    AppID    int32  // APP_ID
+}
+```
+
+**Export and Import Raw Session:**
+
+```go
+// Export raw session
+rawSession := client.ExportRawSession()
+encodedSession := rawSession.Encode()
+
+// Import raw session
+client.ImportAuth(encodedSession)
+```
+
+**Example with Redis:**
+
+```go
+import (
+    "encoding/json"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+// After authentication, export and save to Redis
+rawSession := client.ExportRawSession()
+sessionJSON, _ := json.Marshal(rawSession)
+redisClient.Set(ctx, "session:"+userID, sessionJSON, 0)
+
+// Load from Redis and import
+sessionJSON, _ := redisClient.Get(ctx, "session:"+userID).Bytes()
+var session telegram.Session
+json.Unmarshal(sessionJSON, &session)
+
+client, _ := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+})
+
+client.ImportAuth(session.Encode())
+client.Conn()
+```
+
+**Example with MongoDB:**
+
+```go
+import (
+    "context"
+    "encoding/json"
+    "go.mongodb.org/mongo-driver/bson"
+    "go.mongodb.org/mongo-driver/mongo"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+type SessionDoc struct {
+    UserID      string            `bson:"user_id"`
+    RawSession  telegram.Session  `bson:"session"`
+}
+
+// Save to MongoDB
+rawSession := client.ExportRawSession()
+doc := SessionDoc{
+    UserID:     userID,
+    RawSession: rawSession,
+}
+collection.InsertOne(context.Background(), doc)
+
+// Load from MongoDB
+var doc SessionDoc
+err := collection.FindOne(context.Background(), bson.M{"user_id": userID}).Decode(&doc)
+if err == nil {
+    client, _ := telegram.NewClient(telegram.ClientConfig{
+        AppID:   6,
+        AppHash: "your_app_hash",
+    })
+    
+    client.ImportAuth(doc.RawSession.Encode())
+    client.Conn()
+}
+```
+
+**Using Encoded String Session:**
+
+```go
+// Export as encoded string (base64)
+sessionString := client.ExportSession()
+
+// Store in database
+database.Save(userID, sessionString)
+
+// Later, retrieve and import
+sessionString := database.Load(userID)
+client.ImportSession([]byte(sessionString))
+```
+
+<Tip>
+  Custom session handlers are perfect for multi-tenant applications or when you need centralized session management across multiple instances.
+</Tip>
+
+## Two-Factor Authentication (2FA)
+
+If your account has 2FA enabled, provide the password:
+
+```go
+// The library will prompt for the password if needed
+client.Login("+1234567890")
+
+// Or handle it manually
+client.Login("+1234567890", &tg.LoginOptions{
+	Password: "your_2fa_password",
+})
+```
+
+## Checking Authentication Status
+
+```go
+// Check if client is authenticated
+if client.IsAuthorized()() {
+    log.Println("Already authenticated!")
+} else {
+    log.Println("Need to authenticate")
+    client.AuthPrompt()
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Environment Variables" icon="shield-halved">
+    Store your API credentials in environment variables instead of hardcoding
+    them.
+  </Card>
+  <Card title="Handle Errors Properly" icon="triangle-exclamation">
+    Always check for authentication errors and handle them gracefully.
+  </Card>
+  <Card title="Secure Session Files" icon="lock">
+    Protect your session files as they contain authentication tokens.
+  </Card>
+  <Card title="Use Session Strings" icon="cloud">
+    For cloud deployments, prefer session strings over session files.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Client Configuration" icon="gear" href="/config">
+    Explore all client configuration options
+  </Card>
+  <Card title="Proxy Configuration" icon="network-wired" href="/proxy">
+    Learn how to use proxies with Gogram
+  </Card>
+  <Card title="Event Handlers" icon="bolt" href="/handlers">
+    Learn how to handle messages and updates
+  </Card>
+  <Card title="API Methods" icon="terminal" href="/api">
+    Explore available API methods
+  </Card>
+</CardGroup>

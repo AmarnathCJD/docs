@@ -1,0 +1,132 @@
+---
+title: FAQ
+description: Frequently asked questions about Gogram
+---
+
+## How do I type cast interface responses?
+
+Many methods in Gogram return interface types that can have multiple implementations. You need to use type assertions or type switches to access the concrete type.
+
+### Example 1: AttachMenuBots
+
+The `AttachMenuBots` interface has two possible implementations:
+
+```go
+result, err := client.MessagesGetAttachMenuBots(ctx, &telegram.MessagesGetAttachMenuBotsParams{
+    Hash: 0,
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+// Type switch to handle different implementations
+switch bots := result.(type) {
+case *telegram.AttachMenuBotsObj:
+    fmt.Printf("Hash: %d\n", bots.Hash)
+    fmt.Printf("Found %d bots\n", len(bots.Bots))
+    for _, bot := range bots.Bots {
+        fmt.Printf("Bot: %v\n", bot)
+    }
+    
+case *telegram.AttachMenuBotsNotModified:
+    fmt.Println("Bot list hasn't changed")
+    
+default:
+    fmt.Printf("Unexpected type: %T\n", result)
+}
+```
+
+### Example 2: MessagesMessages
+
+The `MessagesMessages` interface has four possible implementations:
+
+```go
+messages, err := client.MessagesGetHistory(ctx, &telegram.MessagesGetHistoryParams{
+    Peer:  peer,
+    Limit: 100,
+})
+if err != nil {
+    log.Fatal(err)
+}
+
+// Type switch to handle different implementations
+switch m := messages.(type) {
+case *telegram.MessagesMessagesObj:
+    fmt.Printf("Total messages: %d\n", len(m.Messages))
+    for _, msg := range m.Messages {
+        fmt.Printf("Message: %v\n", msg)
+    }
+    
+case *telegram.MessagesMessagesSlice:
+    fmt.Printf("Total count: %d\n", m.Count)
+    fmt.Printf("Loaded %d messages\n", len(m.Messages))
+    if m.Inexact {
+        fmt.Println("Results may be inexact")
+    }
+    
+case *telegram.MessagesChannelMessages:
+    fmt.Printf("Channel messages - Total: %d\n", m.Count)
+    fmt.Printf("PTS: %d\n", m.Pts)
+    fmt.Printf("Offset: %d\n", m.OffsetIDOffset)
+    
+case *telegram.MessagesMessagesNotModified:
+    fmt.Printf("No new messages (count: %d)\n", m.Count)
+    
+default:
+    fmt.Printf("Unexpected type: %T\n", messages)
+}
+```
+
+<Tip>
+  Use type switches (`switch v := result.(type)`) when you need to handle multiple possible implementations. Use type assertions (`result.(*ConcreteType)`) only when you're certain of the type.
+</Tip>
+
+## Why am I getting "min constructor" errors?
+
+This happens when Telegram assumes you already have the access hash for a peer and sends incomplete data. Enable caching to prevent this:
+
+```go
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+    // Cache is enabled by default
+})
+```
+
+See the [Cache documentation](/cache) for more details.
+
+## What Go version is needed?
+
+Go 1.18 or higher.
+
+## Is the library stable and production ready?
+
+YES
+
+## What are the resource requirements?
+
+- **Goroutines**: ~10 - 12 goroutines
+- **Memory**: 10-20 MB RAM usage
+
+## Where can I get help or support?
+
+Join the [Telegram Support Group](https://t.me/gogrammers)
+
+## Supported Proxy Types
+
+Gogram supports the following proxy types:
+- SOCKS5
+- SOCKS4
+- HTTP/HTTPS
+- MTProto (FakeTLS, Obfuscated, Classic)
+
+For more details, see the [Proxy documentation](/proxy).
+
+## Supported Platforms
+
+Gogram is tested and works on:
+- Linux
+- Windows
+- macOS
+- ARM (Raspberry Pi, etc.) (Not tested)
+- WebAssembly (WASM) (Use WebSocket connections)

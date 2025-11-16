@@ -1,0 +1,254 @@
+---
+title: "Proxy Config"
+description: "Configure proxies for Gogram connections"
+---
+
+## Overview
+
+Gogram supports proxy connections for scenarios where direct access to Telegram servers is restricted or when you need to route traffic through a proxy server.
+
+## Supported Proxy Types
+
+Gogram supports the following proxy protocols:
+
+- **SOCKS5** - Recommended for most use cases
+- **SOCKS4** - Legacy SOCKS protocol
+- **HTTP/HTTPS** - Standard HTTP proxies
+- **MTProto** - Telegram's native proxy protocol
+  - FakeTLS
+  - Obfuscated
+  - Classic
+
+## Proxy Interface
+
+All proxies implement the `Proxy` interface:
+
+```go
+type Proxy interface {
+    GetHost() string
+    GetPort() int
+    Type() string
+    GetUsername() string
+    GetPassword() string
+    GetSecret() string
+}
+```
+
+## Creating Proxies
+
+### Using ProxyFromURL
+
+The easiest way to create a proxy is using `ProxyFromURL`:
+
+```go
+import "github.com/amarnathcjd/gogram/telegram"
+
+proxy, err := telegram.ProxyFromURL("socks5://localhost:1080")
+proxy, err := telegram.ProxyFromURL("socks5://user:pass@proxy.example.com:1080")
+proxy, err := telegram.ProxyFromURL("http://proxy.example.com:8080")
+proxy, err := telegram.ProxyFromURL("mtproxy://secret@proxy.example.com:443")
+
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+    Proxy:   proxy,
+})
+```
+
+### Supported URL Formats
+
+<CodeGroup>
+
+```text SOCKS5
+socks5://[user:pass@]host:port
+socks5://localhost:1080
+socks5://user:password@proxy.example.com:1080
+```
+
+```text SOCKS4
+socks4://[userid@]host:port
+socks4://localhost:1080
+socks4://user@proxy.example.com:1080
+```
+
+```text HTTP/HTTPS
+http://[user:pass@]host:port
+https://[user:pass@]host:port
+http://proxy.example.com:8080
+http://user:password@proxy.example.com:8080
+```
+
+```text MTProto
+mtproxy://secret@host:port
+tg://proxy?server=host&port=port&secret=secret
+secret@host:port
+mtproxy://dd1234567890abcdef@proxy.telegram.org:443
+```
+
+</CodeGroup>
+
+## Using Proxy Structs
+
+### SOCKS5 Proxy
+
+```go
+proxy := &telegram.Socks5Proxy{
+    BaseProxy: telegram.BaseProxy{
+        Host: "localhost",
+        Port: 1080,
+    },
+    Username: "user",
+    Password: "pass",
+}
+
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+    Proxy:   proxy,
+})
+```
+
+### SOCKS4 Proxy
+
+```go
+proxy := &telegram.Socks4Proxy{
+    BaseProxy: telegram.BaseProxy{
+        Host: "localhost",
+        Port: 1080,
+    },
+    UserID: "user",
+}
+
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+    Proxy:   proxy,
+})
+```
+
+### HTTP Proxy
+
+```go
+proxy := &telegram.HttpProxy{
+    BaseProxy: telegram.BaseProxy{
+        Host: "proxy.example.com",
+        Port: 8080,
+    },
+    Username: "user",
+    Password: "pass",
+}
+
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+    Proxy:   proxy,
+})
+```
+
+### MTProto Proxy
+
+```go
+proxy := &telegram.MTProxy{
+    BaseProxy: telegram.BaseProxy{
+        Host: "proxy.telegram.org",
+        Port: 443,
+    },
+    Secret: "dd1234567890abcdef",
+}
+
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+    Proxy:   proxy,
+})
+```
+
+<Tip>
+  MTProto proxies are specifically designed for Telegram and can be more efficient than SOCKS5 or HTTP proxies.
+</Tip>
+
+## MTProto Proxy Formats
+
+MTProto proxies support multiple URL formats:
+
+```go
+
+proxy, _ := telegram.ProxyFromURL("mtproxy://secret@proxy.telegram.org:443")
+proxy, _ := telegram.ProxyFromURL("tg://proxy?server=proxy.telegram.org&port=443&secret=dd123456")
+proxy, _ := telegram.ProxyFromURL("dd123456@proxy.telegram.org:443")
+```
+
+## Default Ports
+
+If no port is specified, these defaults are used:
+
+| Proxy Type | Default Port |
+|------------|--------------|
+| SOCKS4/SOCKS5 | 1080 |
+| HTTP | 8080 |
+| HTTPS | 443 |
+| MTProto | 443 |
+
+## Testing Proxy Connection
+
+Verify your proxy is working:
+
+```go
+proxy, err := telegram.ProxyFromURL("socks5://localhost:1080")
+if err != nil {
+    log.Fatal("Invalid proxy URL:", err)
+}
+
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash",
+    Proxy:   proxy,
+})
+
+if err != nil {
+    log.Fatal("Failed to create client:", err)
+}
+
+if err := client.Conn(); err != nil {
+    log.Fatal("Failed to connect through proxy:", err)
+}
+
+log.Println("Successfully connected through proxy!")
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Reliable Proxies" icon="circle-check">
+    Choose stable proxy providers with good uptime
+  </Card>
+  <Card title="Keep Credentials Secure" icon="lock">
+    Store proxy credentials in environment variables
+  </Card>
+  <Card title="Test Connectivity" icon="vial">
+    Always test proxy connection before production use
+  </Card>
+  <Card title="Have Fallbacks" icon="route">
+    Implement fallback logic if proxy fails
+  </Card>
+  <Card title="Use MTProto When Possible" icon="paper-plane">
+    MTProto proxies are optimized for Telegram
+  </Card>
+  <Card title="Monitor Performance" icon="chart-line">
+    Track proxy latency and connection stability
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/auth">
+    Return to authentication guide
+  </Card>
+  <Card title="Configuration" icon="gear" href="/config">
+    Explore all configuration options
+  </Card>
+  <Card title="Event Handlers" icon="bolt" href="/handlers">
+    Learn about handling updates
+  </Card>
+</CardGroup>

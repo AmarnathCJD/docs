@@ -1,0 +1,503 @@
+---
+title: "Client Config"
+description: "Complete guide to configuring Gogram client"
+---
+
+## Overview
+
+The `ClientConfig` struct provides extensive configuration options to customize your Gogram client behavior, from basic authentication to advanced networking settings.
+
+## Basic Configuration
+
+```go
+client, err := telegram.NewClient(telegram.ClientConfig{
+    AppID:   6,
+    AppHash: "your_app_hash", // Optional, but required for authentication
+})
+```
+
+<Note>
+  While `AppHash` is optional in the config, it's required for authentication and certain API methods. You can omit it only if you're importing an existing session.
+</Note>
+
+## Configuration Fields
+
+### Required Fields
+
+<ParamField path="AppID" type="int32" required>
+  The App ID from [my.telegram.org](https://my.telegram.org). Required for all clients.
+</ParamField>
+
+<ParamField path="AppHash" type="string">
+  The App Hash from [my.telegram.org](https://my.telegram.org). Optional in config, but **required for**:
+  - Authentication (Login/LoginBot)
+  - Certain API methods that need app credentials
+  - Initial client setup without existing session
+  
+  Can be omitted if you're importing an already authenticated session.
+</ParamField>
+
+### Session Management
+
+<ParamField path="Session" type="string" default="session.dat">
+  The session file path to use for storing authentication data.
+  
+  ```go
+  Session: "./sessions/my_bot.dat"
+  ```
+</ParamField>
+
+<ParamField path="StringSession" type="string">
+  Use a string session instead of a file. Useful for cloud deployments.
+  
+  ```go
+  StringSession: "1BVtsOIABu7V1..."
+  ```
+</ParamField>
+
+<ParamField path="SessionName" type="string">
+  Custom name for the session. Alternative to `Session` field.
+  
+  ```go
+  SessionName: "my_bot_session"
+  ```
+</ParamField>
+
+<ParamField path="SessionAESKey" type="string">
+  AES encryption key for the session file (32 characters).
+  Optional, not needed unless you need extra protection from string session being leaked.
+  
+  ```go
+  SessionAESKey: "12345678901234567890123456789012"
+  ```
+</ParamField>
+
+<ParamField path="MemorySession" type="bool" default="false">
+  Don't save the session to a file. Session is lost when the program exits.
+  
+  ```go
+  MemorySession: true
+  ```
+</ParamField>
+
+### Device Configuration
+
+<ParamField path="DeviceConfig" type="DeviceConfig">
+  Device information sent to Telegram servers.
+  
+  ```go
+  DeviceConfig: telegram.DeviceConfig{
+      DeviceModel:    "IPhone",
+      SystemVersion:  "17.0",
+      AppVersion:     "1.0.0",
+      LangCode:       "en",
+      SystemLangCode: "en-US",
+  }
+  ```
+</ParamField>
+
+### Network Configuration
+
+<ParamField path="DataCenter" type="int" default="4">
+  The data center to connect to (1-5). Default is DC 4.
+  
+  ```go
+  DataCenter: 2
+  ```
+</ParamField>
+
+<ParamField path="IpAddr" type="string">
+  Manually specify the IP address of the DC to connect to.
+  
+  ```go
+  IpAddr: "149.154.167.50:443"
+  ```
+</ParamField>
+
+<ParamField path="LocalAddr" type="string">
+  Local address binding for multi-interface support (IP:port).
+  
+  ```go
+  LocalAddr: "192.168.1.100:0"
+  ```
+</ParamField>
+
+<ParamField path="ForceIPv6" type="bool" default="false">
+  Force the client to use IPv6 connections.
+  
+  ```go
+  ForceIPv6: true
+  ```
+</ParamField>
+
+<ParamField path="Proxy" type="Proxy">
+  Proxy configuration for routing traffic. See [Proxy Configuration](/proxy).
+  
+  ```go
+  Proxy: telegram.ProxyFromURL("socks5://username@password:ip@port")
+  ```
+</ParamField>
+
+<ParamField path="UseWebSocket" type="bool" default="false">
+  Use WebSocket transport instead of TCP.
+  This must be enabled to use the library inside browsers, since they don’t allow TCP connections from JavaScript.
+  
+  ```go
+  UseWebSocket: true
+  ```
+</ParamField>
+
+<ParamField path="UseWebSocketTLS" type="bool" default="false">
+  Use wss:// (WebSocket over TLS) instead of ws://.
+  
+  ```go
+  UseWebSocketTLS: true
+  ```
+</ParamField>
+
+### Transport & Protocol
+
+<ParamField path="TransportMode" type="string" default="Abridged">
+  The transport mode to use. Options: `Abridged`, `Intermediate`, `PaddedIntermediate`, `Full`.
+  
+  ```go
+  TransportMode: "Abridged" // default
+  ```
+</ParamField>
+
+<ParamField path="PublicKeys" type="[]*rsa.PublicKey">
+  Custom public keys to verify the server with.
+  
+  ```go
+  PublicKeys: []*rsa.PublicKey{customKey}
+  ```
+</ParamField>
+
+<ParamField path="TestMode" type="bool" default="false">
+  Use the test data centers instead of production.
+  
+  ```go
+  TestMode: true
+  ```
+</ParamField>
+
+### Behavior & Features
+
+<ParamField path="ParseMode" type="string" default="HTML">
+  Default parse mode for messages. Options: `HTML`, `Markdown`.
+  
+  ```go
+  ParseMode: "Markdown"
+  ```
+</ParamField>
+
+<ParamField path="NoUpdates" type="bool" default="false">
+  Don't handle updates. Useful for stateless bots.
+  
+  ```go
+  NoUpdates: true
+  ```
+</ParamField>
+
+<ParamField path="DisableCache" type="bool" default="false">
+  Disable caching peer and chat information.
+  
+  ```go
+  DisableCache: true
+  ```
+</ParamField>
+
+<ParamField path="CacheSenders" type="bool" default="false">
+  Cache the exported file operation senders.
+  
+  ```go
+  CacheSenders: true
+  ```
+</ParamField>
+
+<ParamField path="Cache" type="*CACHE">
+  Custom cache implementation for storing peer information.
+  See [Client Cache](/cache).
+  ```go
+  Cache: customCache
+  ```
+</ParamField>
+
+<ParamField path="NoPreconnect" type="bool" default="false">
+  Don't preconnect to the DC until `Connect()` is called. Otherwise it preconnects if string session is provided.
+  
+  ```go
+  NoPreconnect: true
+  ```
+</ParamField>
+
+### Commands & Messages
+
+<ParamField path="CommandPrefixes" type="string" default="/!">
+  Command prefixes to recognize. Can be multiple characters.
+  
+  ```go
+  CommandPrefixes: ".?!-/"
+  ```
+</ParamField>
+
+<ParamField path="AlbumWaitTime" type="int64" default="500">
+  Time to wait for album messages in milliseconds.
+  
+  ```go
+  AlbumWaitTime: 1000 // 1 second
+  ```
+</ParamField>
+
+### Rate Limiting & Timeouts
+
+<ParamField path="SleepThresholdMs" type="int" default="10000">
+  Threshold in milliseconds to sleep before flood wait.
+  
+  ```go
+  SleepThresholdMs: 5000
+  ```
+</ParamField>
+
+<ParamField path="Timeout" type="int" default="60">
+  TCP connection timeout in seconds.
+  
+  ```go
+  Timeout: 30
+  ```
+</ParamField>
+
+<ParamField path="ReqTimeout" type="int" default="60">
+  RPC request timeout in seconds.
+  
+  ```go
+  ReqTimeout: 120
+  ```
+</ParamField>
+
+<ParamField path="FloodHandler" type="func(err error) bool">
+  Custom handler for flood wait errors. Return `true` to retry, `false` to drop the request
+  
+  ```go
+  FloodHandler: func(err error) bool {
+      log.Printf("Flood wait: %v", err)
+      return true // Retry after waiting
+  }
+  ```
+</ParamField>
+
+### Logging
+
+<ParamField path="LogLevel" type="LogLevel" default="InfoLevel">
+  The library log level. Options: `DebugLevel`, `InfoLevel`, `WarnLevel`, `ErrorLevel`.
+  
+  ```go
+  LogLevel: telegram.DebugLevel
+  ```
+</ParamField>
+
+<ParamField path="Logger" type="Logger">
+  Custom logger implementation.
+  See [Logging](/logging).
+  ```go
+  Logger: customLogger
+  ```
+</ParamField>
+
+<ParamField path="ErrorHandler" type="func(err error)">
+  Custom error handler for global error handling.
+  
+  ```go
+  ErrorHandler: func(err error) {
+      log.Printf("Error: %v", err)
+  }
+  ```
+</ParamField>
+
+## Using ClientConfigBuilder
+
+For more convenient configuration, use the `ClientConfigBuilder`:
+
+```go
+config := telegram.NewClientConfigBuilder(6, "your_app_hash").
+    WithDeviceConfig("IPhone", "17.0", "1.0.0", "en", "en-US", "ios").
+    WithSession("my_session.dat").
+    WithParseMode("Markdown").
+    WithDataCenter(2).
+    WithProxy("socks5://localhost:1080").
+    WithLogLevel(telegram.DebugLevel).
+    Build()
+
+client, err := telegram.NewClient(config)
+```
+
+### Builder Methods
+
+<CodeGroup>
+
+```go WithDeviceConfig
+WithDeviceConfig(deviceModel, systemVersion, appVersion, langCode, sysLangCode, langPack string)
+```
+
+```go WithSession
+WithSession(session string, sessionAESKey ...string)
+```
+
+```go WithStringSession
+WithStringSession(stringSession string)
+```
+
+```go WithParseMode
+WithParseMode(parseMode string)
+```
+
+```go WithDataCenter
+WithDataCenter(dc int)
+```
+
+```go WithProxy
+WithProxy(proxy Proxy)
+```
+
+```go WithLocalAddr
+WithLocalAddr(localAddr string)
+```
+
+```go WithLogLevel
+WithLogLevel(level LogLevel)
+```
+
+```go WithMemorySession
+WithMemorySession()
+```
+
+```go WithNoUpdates
+WithNoUpdates()
+```
+
+```go WithDisableCache
+WithDisableCache()
+```
+
+```go WithTestMode
+WithTestMode()
+```
+
+```go WithIpAddr
+WithIpAddr(ipAddr string)
+```
+
+```go WithPublicKeys
+WithPublicKeys(publicKeys []*rsa.PublicKey)
+```
+
+```go WithCache
+WithCache(cache *CACHE)
+```
+
+```go WithCacheSenders
+WithCacheSenders()
+```
+
+```go WithSleepThresholdMs
+WithSleepThresholdMs(threshold int)
+```
+
+```go WithFloodHandler
+WithFloodHandler(handler func(err error) bool)
+```
+
+```go WithErrorHandler
+WithErrorHandler(handler func(err error))
+```
+
+```go WithSessionName
+WithSessionName(name string)
+```
+
+```go WithTransportMode
+WithTransportMode(mode string)
+```
+
+```go WithLogger
+WithLogger(logger Logger)
+```
+
+```go WithTimeout
+WithTimeout(timeout int)
+```
+
+```go WithReqTimeout
+WithReqTimeout(reqTimeout int)
+```
+
+</CodeGroup>
+
+## Complete Example
+
+```go
+package main
+
+import (
+    "log"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    // Using builder pattern
+    config := telegram.NewClientConfigBuilder(6, "your_app_hash").
+        WithDeviceConfig("Server", "1.0", "1.0.0", "en", "en-US", "").
+        WithSession("session.dat").
+        WithParseMode("HTML").
+        WithLogLevel(telegram.InfoLevel).
+        Build()
+    
+    client, err := telegram.NewClient(config)
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    client.Conn()
+    client.LoginBot("BOT_TOKEN")
+    
+    log.Println("Bot started successfully!")
+    client.Idle()
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Builder Pattern" icon="wrench">
+    Use ClientConfigBuilder for cleaner, more maintainable configuration.
+  </Card>
+  <Card title="Encrypt Sessions" icon="lock">
+    Always use SessionAESKey to encrypt session files in production.
+  </Card>
+  <Card title="Set Timeouts" icon="clock">
+    Configure appropriate timeouts based on your network conditions.
+  </Card>
+  <Card title="Handle Floods" icon="water">
+    Implement custom FloodHandler to manage rate limiting gracefully.
+  </Card>
+  <Card title="Use String Sessions" icon="cloud">
+    For cloud deployments, prefer StringSession over file-based sessions.
+  </Card>
+  <Card title="Enable Logging" icon="terminal">
+    Use appropriate LogLevel for debugging and production monitoring.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/auth">
+    Learn how to authenticate your client
+  </Card>
+  <Card title="Proxy Configuration" icon="network-wired" href="/proxy">
+    Configure proxy settings
+  </Card>
+  <Card title="Event Handlers" icon="bolt" href="/handlers">
+    Handle messages and updates
+  </Card>
+</CardGroup>
