@@ -10,8 +10,9 @@ icon: "code"
   alt="Gogram Logo"
   width="200"
 />
+
 <img
-  className="hidden dark:block"
+  className="hidden dark:block mx-auto"
   src="/images/RE1M0sM.png"
   alt="Gogram Logo"
   width="200"
@@ -39,12 +40,14 @@ Please note that gogram requires **Go 1.18 or later** to support go-generics.
     ```bash
     go get -u github.com/amarnathcjd/gogram/telegram@master
     ```
+
     Install the latest version from the master branch for newest features.
   </Tab>
   <Tab title="Dev Branch">
     ```bash
     go get -u github.com/amarnathcjd/gogram/telegram@dev
     ```
+
     Install from the development branch for experimental features (may be unstable).
   </Tab>
 </Tabs>
@@ -101,56 +104,26 @@ func main() {
 }
 ```
 
-<Card
-  title="Try the Live Demo"
-  icon="robot"
-  href="https://t.me/rustydbot"
-  horizontal
->
+<Card title="Try the Live Demo" icon="robot" horizontal href="https://t.me/rustydbot">
   Try JuliaBot - modular bot example. <Icon icon="github" /> [View Source](https://github.com/AmarnathCJD/JuliaBot)
 </Card>
 
 ## Learn More
 
 <CardGroup cols={2}>
-  <Card
-    title="Authentication"
-    icon="key"
-    href="/auth"
-    horizontal
-  >
+  <Card title="Authentication" icon="key" horizontal href="/auth">
     Learn how to authenticate as a bot or user account.
   </Card>
-  <Card
-    title="Event Handlers"
-    icon="bolt"
-    href="/handlers"
-    horizontal
-  >
+  <Card title="Event Handlers" icon="bolt" horizontal href="/handlers">
     Handle messages and other updates.
   </Card>
-  <Card
-    title="API Methods"
-    icon="terminal"
-    href="/invoke"
-    horizontal
-  >
+  <Card title="API Methods" icon="terminal" horizontal href="/invoke">
     Explore available methods and features.
   </Card>
-  <Card
-    title="TL Reference"
-    icon="book-open"
-    href="https://tl.gogram.fun"
-    horizontal
-  >
+  <Card title="TL Reference" icon="book-open" horizontal href="https://tl.gogram.fun">
     Complete Telegram Layer (TL) schema reference.
   </Card>
-  <Card
-    title="Examples"
-    icon="code"
-    href="/examples"
-    horizontal
-  >
+  <Card title="Examples" icon="code" horizontal href="/examples">
     View complete examples and use cases.
   </Card>
 </CardGroup>
@@ -161,15 +134,12 @@ func main() {
   <Accordion title="Pure Go Implementation" icon="golang">
     Written entirely in Go with no external dependencies. Native MTProto implementation means you get full access to Telegram's features without limitations.
   </Accordion>
-  
   <Accordion title="Type-Safe & Modern" icon="shield-check">
     Leverages Go 1.18+ generics for compile-time type safety. Clean, intuitive API design that follows Go best practices.
   </Accordion>
-  
   <Accordion title="High Performance" icon="bolt">
     Built for concurrent operations with goroutines. Efficient connection pooling and automatic flood control. Optimized for both bots and user clients.
   </Accordion>
-  
   <Accordion title="Feature Complete" icon="stars">
     Full MTProto protocol support including file transfers, media handling, inline bots, payments, and all Telegram features. Regular updates to support new Telegram features.
   </Accordion>
@@ -178,28 +148,16 @@ func main() {
 ## Features
 
 <CardGroup cols={2}>
-  <Card
-    title="Type-Safe"
-    icon="shield"
-  >
+  <Card title="Type-Safe" icon="shield">
     Full type safety with Go's strong typing system.
   </Card>
-  <Card
-    title="Concurrent"
-    icon="gauge-high"
-  >
+  <Card title="Concurrent" icon="gauge-high">
     Built for concurrent operations and high performance.
   </Card>
-  <Card
-    title="Modern API"
-    icon="sparkles"
-  >
+  <Card title="Modern API" icon="sparkles">
     Clean, intuitive API that's easy to use.
   </Card>
-  <Card
-    title="MTProto Native"
-    icon="paper-plane"
-  >
+  <Card title="MTProto Native" icon="paper-plane">
     Full native implementation of MTProto protocol.
   </Card>
 </CardGroup>
