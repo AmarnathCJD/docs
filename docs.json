@@ -3,9 +3,9 @@
   "theme": "mint",
   "name": "Gogram",
   "colors": {
-    "primary": "#AB1CFC",
-    "light": "#C854FF",
-    "dark": "#9015D9"
+  "primary": "#2563EB",
+  "light": "#60A5FA",
+  "dark": "#1E40AF"
   },
   "favicon": "/favicon.svg",
   "navigation": {
