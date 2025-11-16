@@ -1,6 +1,6 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "willow",
+  "theme": "mint",
   "name": "Gogram",
   "colors": {
     "primary": "#16A34A",
@@ -141,5 +141,8 @@
       "github": "https://github.com/amarnathcjd/gogram",
       "telegram": "https://t.me/gogrammer_s"
     }
+  },
+  "appearance": {
+    "strict": false
   }
 }
