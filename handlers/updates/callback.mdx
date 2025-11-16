@@ -1,0 +1,660 @@
+---
+title: "CallbackQuery"
+description: "Handle button clicks and callback queries"
+---
+
+## Overview
+
+`CallbackQuery` represents a callback from an inline button click. It's triggered when users click inline keyboard buttons with callback data.
+
+## Structure
+
+```go
+type CallbackQuery struct {
+    QueryID        int64
+    Data           []byte
+    OriginalUpdate *UpdateBotCallbackQuery
+    Sender         *UserObj
+    MessageID      int32
+    SenderID       int64
+    ChatID         int64
+    Chat           *ChatObj
+    Channel        *Channel
+    Peer           Peer
+    Client         *Client
+}
+```
+
+## Basic Properties
+
+### Query Information
+
+<ParamField path="QueryID" type="int64">
+  Unique query identifier
+  
+  ```go
+  queryID := c.QueryID
+  ```
+</ParamField>
+
+<ParamField path="Data" type="[]byte">
+  Callback data from button
+  
+  ```go
+  data := c.Data
+  ```
+</ParamField>
+
+<ParamField path="DataString()" type="string">
+  Get callback data as string
+  
+  ```go
+  dataStr := c.DataString()
+  ```
+</ParamField>
+
+<ParamField path="MessageID" type="int32">
+  ID of message with the button
+  
+  ```go
+  msgID := c.MessageID
+  ```
+</ParamField>
+
+### Sender Information
+
+<ParamField path="GetSenderID()" type="int64">
+  Get user ID who clicked button
+  
+  ```go
+  userID := c.GetSenderID()
+  ```
+</ParamField>
+
+<ParamField path="GetSender()" type="(*UserObj, error)">
+  Get full sender object
+  
+  ```go
+  sender, err := c.GetSender()
+  fmt.Println(sender.FirstName)
+  ```
+</ParamField>
+
+### Chat Information
+
+<ParamField path="GetChatID()" type="int64">
+  Get chat/channel ID
+  
+  ```go
+  chatID := c.GetChatID()
+  ```
+</ParamField>
+
+<ParamField path="ChatType()" type="string">
+  Get chat type: `user`, `chat`, `channel`
+  
+  ```go
+  if c.ChatType() == telegram.EntityUser {
+      // Private chat
+  }
+  ```
+</ParamField>
+
+## Answer Callback
+
+### Basic Answer
+
+<CodeGroup>
+
+```go Simple Answer
+// Answer with popup message
+c.Answer("Button clicked!", &telegram.CallbackOptions{
+    Alert: false, // Toast notification
+})
+```
+
+```go Alert Answer
+// Answer with alert popup
+c.Answer("Operation successful!", &telegram.CallbackOptions{
+    Alert: true, // Alert dialog
+})
+```
+
+```go URL Answer
+// Answer with URL to open
+c.Answer("", &telegram.CallbackOptions{
+    URL: "https://example.com",
+})
+```
+
+```go Cache Time
+// Answer with custom cache time
+c.Answer("Cached response", &telegram.CallbackOptions{
+    CacheTime: 300, // Cache for 5 minutes
+})
+```
+
+</CodeGroup>
+
+## Response Methods
+
+### Edit Message
+
+<Tabs>
+  <Tab title="Edit Text">
+    ```go
+    // Edit message text
+    c.Edit("Button was clicked!")
+    
+    // Edit with options
+    c.Edit("Updated text", &telegram.SendOptions{
+        ParseMode: "HTML",
+        ReplyMarkup: telegram.ReplyInlineMarkup(
+            telegram.Row(
+                telegram.Data("New Button", "new_data"),
+            ),
+        ),
+    })
+    ```
+  </Tab>
+  <Tab title="Edit Markup">
+    ```go
+    // Change only buttons
+    c.Edit("Same text", &telegram.SendOptions{
+        ReplyMarkup: telegram.ReplyInlineMarkup(
+            telegram.Row(
+                telegram.Data("Updated", "updated"),
+            ),
+        ),
+    })
+    ```
+  </Tab>
+  <Tab title="Remove Markup">
+    ```go
+    // Remove buttons
+    c.Edit("Buttons removed", &telegram.SendOptions{
+        ReplyMarkup: &telegram.ReplyKeyboardRemove{},
+    })
+    ```
+  </Tab>
+</Tabs>
+
+### Send Messages
+
+<CodeGroup>
+
+```go Reply
+// Reply to the message with button
+msg, err := c.Reply("Replying to your click")
+```
+
+```go Respond
+// Send new message without replying
+msg, err := c.Respond("Processing...")
+```
+
+```go Reply Media
+// Reply with media
+c.ReplyMedia(&telegram.InputMediaPhoto{
+    File: "photo.jpg",
+}, &telegram.MediaOptions{
+    Caption: "Here's your photo",
+})
+```
+
+```go Respond Media
+// Send media without replying
+c.RespondMedia(&telegram.InputMediaVideo{
+    File: "video.mp4",
+})
+```
+
+</CodeGroup>
+
+## Message Operations
+
+### Get Message
+
+```go
+// Get the message that has the button
+msg, err := c.GetMessage()
+if err == nil {
+    fmt.Println("Message text:", msg.Text())
+}
+```
+
+### Delete Message
+
+```go
+// Delete message with button
+affected, err := c.Delete()
+if err == nil {
+    fmt.Println("Message deleted")
+}
+```
+
+### Forward Message
+
+```go
+// Forward message to another chat
+msg, err := c.ForwardTo(targetChatID, &telegram.ForwardOptions{
+    Silent: true,
+})
+```
+
+## Chat Type Checks
+
+<Tabs>
+  <Tab title="Private">
+    ```go
+    if c.IsPrivate() {
+        c.Answer("Private chat callback")
+    }
+    ```
+  </Tab>
+  <Tab title="Group">
+    ```go
+    if c.IsGroup() {
+        c.Answer("Group chat callback")
+    }
+    ```
+  </Tab>
+  <Tab title="Channel">
+    ```go
+    if c.IsChannel() {
+        c.Answer("Channel callback")
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Advanced Features
+
+### Conversations
+
+<CodeGroup>
+
+```go Ask Question
+// Start conversation after callback
+response, err := c.Ask("What's your name?")
+if err == nil {
+    c.Respond("Hello, " + response.Text())
+}
+```
+
+```go Manual Conversation
+// Manual conversation handling
+conv, _ := c.Conv(120) // 120 sec timeout
+defer conv.Close()
+
+conv.Respond("Enter your age:")
+age, _ := conv.GetResponse()
+
+conv.Respond("Enter your city:")
+city, _ := conv.GetResponse()
+
+c.Answer(fmt.Sprintf("Age: %s, City: %s", 
+    age.Text(), city.Text()))
+```
+
+</CodeGroup>
+
+### Get Related Objects
+
+```go
+// Get chat object
+chat, err := c.GetChat()
+
+// Get channel object
+channel, err := c.GetChannel()
+
+// Get sender user
+sender, err := c.GetSender()
+```
+
+## Practical Examples
+
+### Button Navigation
+
+```go
+client.On("callback", func(c *telegram.CallbackQuery) error {
+    data := c.DataString()
+    
+    switch data {
+    case "menu_main":
+        c.Edit("Main Menu", &telegram.SendOptions{
+            ReplyMarkup: telegram.ReplyInlineMarkup(
+                telegram.Row(
+                    telegram.Data("📝 Help", "menu_help"),
+                    telegram.Data("ℹ️ About", "menu_about"),
+                ),
+            ),
+        })
+        c.Answer("Main menu opened")
+        
+    case "menu_help":
+        c.Edit("Help Section\n\nCommands:\n/start\n/help", 
+            &telegram.SendOptions{
+                ReplyMarkup: telegram.ReplyInlineMarkup(
+                    telegram.Row(
+                        telegram.Data("« Back", "menu_main"),
+                    ),
+                ),
+            })
+        c.Answer("Help")
+        
+    case "menu_about":
+        c.Edit("About Bot\n\nVersion 1.0", &telegram.SendOptions{
+            ReplyMarkup: telegram.ReplyInlineMarkup(
+                telegram.Row(
+                    telegram.Data("« Back", "menu_main"),
+                ),
+            ),
+        })
+        c.Answer("About")
+    }
+    
+    return nil
+})
+```
+
+### Confirmation Dialog
+
+```go
+client.On("callback:delete_", func(c *telegram.CallbackQuery) error {
+    data := c.DataString()
+    
+    if data == "delete_confirm" {
+        c.Delete()
+        c.Answer("Message deleted!", &telegram.CallbackOptions{
+            Alert: true,
+        })
+    } else if data == "delete_cancel" {
+        c.Edit("Deletion cancelled")
+        c.Answer("Cancelled")
+    }
+    
+    return nil
+})
+
+// Initial message with confirmation
+client.On("cmd:delete", func(m *telegram.NewMessage) error {
+    m.Reply("Are you sure?", telegram.SendOptions{
+        ReplyMarkup: telegram.ReplyInlineMarkup(
+            telegram.Row(
+                telegram.Data("✅ Yes", "delete_confirm"),
+                telegram.Data("❌ No", "delete_cancel"),
+            ),
+        ),
+    })
+    return nil
+})
+```
+
+### Pagination
+
+```go
+client.On("callback:page_", func(c *telegram.CallbackQuery) error {
+    data := c.DataString()
+    page := 1
+    
+    // Parse page number from data
+    fmt.Sscanf(data, "page_%d", &page)
+    
+    // Get items for page
+    items := getItemsForPage(page)
+    
+    // Build message
+    text := fmt.Sprintf("Page %d\n\n%s", page, items)
+    
+    // Build pagination buttons
+    buttons := []telegram.Row{}
+    
+    navRow := telegram.Row{}
+    if page > 1 {
+        navRow = append(navRow, 
+            telegram.Data("« Prev", fmt.Sprintf("page_%d", page-1)))
+    }
+    navRow = append(navRow, 
+        telegram.Data(fmt.Sprintf("· %d ·", page), "page_current"))
+    navRow = append(navRow, 
+        telegram.Data("Next »", fmt.Sprintf("page_%d", page+1)))
+    
+    buttons = append(buttons, navRow)
+    
+    c.Edit(text, &telegram.SendOptions{
+        ReplyMarkup: telegram.ReplyInlineMarkup(buttons...),
+    })
+    c.Answer(fmt.Sprintf("Page %d", page))
+    
+    return nil
+})
+```
+
+### Admin Actions
+
+```go
+adminIDs := []int64{123456789, 987654321}
+
+client.On("callback:admin_", func(c *telegram.CallbackQuery) error {
+    // Check if user is admin
+    isAdmin := false
+    for _, id := range adminIDs {
+        if c.GetSenderID() == id {
+            isAdmin = true
+            break
+        }
+    }
+    
+    if !isAdmin {
+        c.Answer("Access denied!", &telegram.CallbackOptions{
+            Alert: true,
+        })
+        return nil
+    }
+    
+    data := c.DataString()
+    
+    switch data {
+    case "admin_ban":
+        // Ban user
+        c.Answer("User banned", &telegram.CallbackOptions{
+            Alert: true,
+        })
+        
+    case "admin_delete":
+        // Delete message
+        c.Delete()
+        c.Answer("Deleted")
+        
+    case "admin_warn":
+        // Warn user
+        c.Answer("User warned", &telegram.CallbackOptions{
+            Alert: true,
+        })
+    }
+    
+    return nil
+})
+```
+
+### Loading States
+
+```go
+client.On("callback:process", func(c *telegram.CallbackQuery) error {
+    // Show loading
+    c.Edit("Processing... ⏳")
+    c.Answer("Please wait...")
+    
+    // Do some work
+    time.Sleep(2 * time.Second)
+    
+    // Show result
+    c.Edit("✅ Complete!", &telegram.SendOptions{
+        ReplyMarkup: telegram.ReplyInlineMarkup(
+            telegram.Row(
+                telegram.Data("Do Again", "process"),
+            ),
+        ),
+    })
+    c.Answer("Done!")
+    
+    return nil
+})
+```
+
+### Data with Parameters
+
+```go
+client.On("callback:action_", func(c *telegram.CallbackQuery) error {
+    data := c.DataString()
+    
+    // Parse action and parameter
+    // Format: "action_TYPE_PARAM"
+    parts := strings.Split(data, "_")
+    if len(parts) < 3 {
+        return nil
+    }
+    
+    action := parts[1]
+    param := parts[2]
+    
+    switch action {
+    case "like":
+        c.Answer(fmt.Sprintf("Liked item %s", param))
+        
+    case "share":
+        c.Answer(fmt.Sprintf("Shared item %s", param))
+        
+    case "delete":
+        c.Answer(fmt.Sprintf("Deleted item %s", param), 
+            &telegram.CallbackOptions{Alert: true})
+    }
+    
+    return nil
+})
+```
+
+## Complete Example
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    client, _ := telegram.NewClient(telegram.ClientConfig{
+        AppID: 6, AppHash: "app_hash",
+    })
+    
+    client.LoginBot("bot_token")
+    
+    // Send button
+    client.On("cmd:start", func(m *telegram.NewMessage) error {
+        m.Reply("Welcome! Click a button:", telegram.SendOptions{
+            ReplyMarkup: telegram.ReplyInlineMarkup(
+                telegram.Row(
+                    telegram.Data("👍 Like", "action_like"),
+                    telegram.Data("❤️ Love", "action_love"),
+                ),
+                telegram.Row(
+                    telegram.Data("ℹ️ Info", "action_info"),
+                ),
+            ),
+        })
+        return nil
+    })
+    
+    // Handle callbacks
+    client.On("callback", func(c *telegram.CallbackQuery) error {
+        data := c.DataString()
+        sender, _ := c.GetSender()
+        
+        fmt.Printf("Callback from %s: %s\n", 
+            sender.FirstName, data)
+        
+        switch data {
+        case "action_like":
+            c.Answer("You clicked Like! 👍")
+            c.Edit("You liked this message! 👍")
+            
+        case "action_love":
+            c.Answer("You clicked Love! ❤️", 
+                &telegram.CallbackOptions{Alert: true})
+            c.Edit("You loved this message! ❤️")
+            
+        case "action_info":
+            c.Edit("Bot Info\n\nVersion 1.0\nBy @YourBot", 
+                &telegram.SendOptions{
+                    ReplyMarkup: telegram.ReplyInlineMarkup(
+                        telegram.Row(
+                            telegram.Data("« Back", "action_back"),
+                        ),
+                    ),
+                })
+            c.Answer("Info")
+            
+        case "action_back":
+            c.Edit("Welcome! Click a button:", telegram.SendOptions{
+                ReplyMarkup: telegram.ReplyInlineMarkup(
+                    telegram.Row(
+                        telegram.Data("👍 Like", "action_like"),
+                        telegram.Data("❤️ Love", "action_love"),
+                    ),
+                    telegram.Row(
+                        telegram.Data("ℹ️ Info", "action_info"),
+                    ),
+                ),
+            })
+            c.Answer("Main menu")
+        }
+        
+        return nil
+    })
+    
+    client.Idle()
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Always Answer" icon="check">
+    Always call Answer() to acknowledge callback, even if empty
+  </Card>
+  <Card title="Unique Data" icon="fingerprint">
+    Use unique callback data for different buttons
+  </Card>
+  <Card title="Data Format" icon="code">
+    Use consistent format for callback data (e.g., "action_param")
+  </Card>
+  <Card title="Check Permissions" icon="shield">
+    Verify user permissions for admin actions
+  </Card>
+  <Card title="Loading States" icon="spinner">
+    Show loading state for long operations
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation">
+    Handle errors gracefully with alert messages
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="NewMessage" icon="message" href="/handlers/updates/newmessage">
+    Learn about messages
+  </Card>
+  <Card title="Album" icon="images" href="/handlers/updates/album">
+    Handle media groups
+  </Card>
+  <Card title="InlineQuery" icon="search" href="/handlers/updates/inline">
+    Handle inline queries
+  </Card>
+  <Card title="Filters" icon="filter" href="/handlers/filters">
+    Filter callbacks
+  </Card>
+</CardGroup>

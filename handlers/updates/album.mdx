@@ -1,0 +1,546 @@
+---
+title: "Album"
+description: "Handle grouped media messages (albums)"
+---
+
+## Overview
+
+`Album` represents a group of media messages sent together (media group/album). Telegram allows sending up to 10 media items as a single grouped message.
+
+## Structure
+
+```go
+type Album struct {
+    Client    *Client
+    GroupedID int64
+    Messages  []*NewMessage
+}
+```
+
+## Properties
+
+<ParamField path="GroupedID" type="int64">
+  Unique identifier for the media group
+  
+  ```go
+  groupID := album.GroupedID
+  ```
+</ParamField>
+
+<ParamField path="Messages" type="[]*NewMessage">
+  Array of messages in the album (sorted by ID)
+  
+  ```go
+  for i, msg := range album.Messages {
+      fmt.Printf("Item %d: %s\n", i+1, msg.MediaType())
+  }
+  ```
+</ParamField>
+
+<ParamField path="Client" type="*Client">
+  Client instance for making API calls
+  
+  ```go
+  client := album.Client
+  ```
+</ParamField>
+
+## Basic Usage
+
+### Handling Albums
+
+```go
+client.On("album", func(a *telegram.Album) error {
+    fmt.Printf("Received album with %d items\n", len(a.Messages))
+    
+    for i, msg := range a.Messages {
+        fmt.Printf("%d. %s\n", i+1, msg.MediaType())
+    }
+    
+    a.Messages[0].Reply("Received your album!")
+    return nil
+})
+```
+
+### Accessing Individual Messages
+
+```go
+client.On("album", func(a *telegram.Album) error {
+    // First message
+    first := a.Messages[0]
+    
+    // Last message
+    last := a.Messages[len(a.Messages)-1]
+    
+    // Iterate all
+    for idx, msg := range a.Messages {
+        fmt.Printf("Message %d: ID=%d, Type=%s\n", 
+            idx, msg.ID, msg.MediaType())
+    }
+    
+    return nil
+})
+```
+
+## Response Methods
+
+All response methods work through the first message in the album.
+
+### Text Responses
+
+<CodeGroup>
+
+```go Reply
+// Reply to the album
+a.Reply("Great photos!")
+
+// With options
+a.Reply("Nice album!", telegram.SendOptions{
+    ParseMode: "HTML",
+})
+```
+
+```go Respond
+// Send message to same chat
+a.Respond("Processing your album...")
+```
+
+</CodeGroup>
+
+### Media Responses
+
+<CodeGroup>
+
+```go ReplyMedia
+// Reply with single media
+a.ReplyMedia(&telegram.InputMediaPhoto{
+    File: "response.jpg",
+}, telegram.MediaOptions{
+    Caption: "Here's a response photo",
+})
+```
+
+```go RespondMedia
+// Send media without replying
+a.RespondMedia(&telegram.InputMediaVideo{
+    File: "video.mp4",
+})
+```
+
+</CodeGroup>
+
+## Album Actions
+
+### Downloading Album
+
+<CodeGroup>
+
+```go Download All
+// Download all media in album
+paths, err := a.Download()
+if err == nil {
+    for i, path := range paths {
+        fmt.Printf("Downloaded %d: %s\n", i+1, path)
+    }
+}
+```
+
+```go Download with Options
+// Download to specific directory
+paths, err := a.Download(&telegram.DownloadOptions{
+    Output: "albums/",
+    ProgressCallback: func(current, total int64) {
+        fmt.Printf("Progress: %d%%\n", (current*100)/total)
+    },
+})
+```
+
+```go Download Individual
+// Download specific items
+for i, msg := range a.Messages {
+    if msg.MediaType() == "photo" {
+        path, _ := msg.Download(&telegram.DownloadOptions{
+            Output: fmt.Sprintf("album_%d.jpg", i),
+        })
+    }
+}
+```
+
+</CodeGroup>
+
+### Deleting Album
+
+```go
+// Delete entire album
+affected, err := a.Delete()
+if err == nil {
+    fmt.Printf("Deleted %d messages\n", affected.PtsCount)
+}
+
+// Delete works on all messages in the album
+```
+
+### Forwarding Album
+
+```go
+// Forward entire album to another chat
+messages, err := a.ForwardTo(targetChatID)
+if err == nil {
+    fmt.Printf("Forwarded %d items\n", len(messages))
+}
+
+// Forward with options
+messages, err := a.ForwardTo(targetChatID, &telegram.ForwardOptions{
+    Silent:    true,
+    NoCaption: true,
+})
+```
+
+### Editing Album
+
+```go
+// Edit caption of first message
+a.Edit("Updated album caption")
+
+// Edit with options
+a.Edit("New caption", telegram.SendOptions{
+    ParseMode: "Markdown",
+})
+
+// Note: This only edits the first message's caption
+```
+
+## Album Checks
+
+### Message Type Checks
+
+<Tabs>
+  <Tab title="Reply">
+    ```go
+    if a.IsReply() {
+        replyMsg, _ := a.GetReplyMessage()
+        fmt.Println("Album is reply to:", replyMsg.Text())
+    }
+    ```
+  </Tab>
+  <Tab title="Forward">
+    ```go
+    if a.IsForward() {
+        a.Reply("This album was forwarded")
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Media Type Analysis
+
+```go
+client.On("album", func(a *telegram.Album) error {
+    var photos, videos, docs int
+    
+    for _, msg := range a.Messages {
+        switch msg.MediaType() {
+        case "photo":
+            photos++
+        case "video":
+            videos++
+        case "document":
+            docs++
+        }
+    }
+    
+    a.Reply(fmt.Sprintf("Album contains:\n"+
+        "Photos: %d\nVideos: %d\nDocuments: %d",
+        photos, videos, docs))
+    
+    return nil
+})
+```
+
+## Utilities
+
+### Mark as Read
+
+```go
+// Mark album as read
+err := a.MarkRead()
+```
+
+### Pin/Unpin Album
+
+<CodeGroup>
+
+```go Pin
+// Pin first message of album
+a.Pin()
+
+// Pin silently
+a.Pin(&telegram.PinOptions{
+    Silent: true,
+})
+```
+
+```go Unpin
+// Unpin album
+a.Unpin()
+```
+
+</CodeGroup>
+
+## Practical Examples
+
+### Download Only Photos
+
+```go
+client.On("album", func(a *telegram.Album) error {
+    var photoPaths []string
+    
+    for i, msg := range a.Messages {
+        if msg.Photo() != nil {
+            path, err := msg.Download(&telegram.DownloadOptions{
+                Output: fmt.Sprintf("photo_%d.jpg", i),
+            })
+            if err == nil {
+                photoPaths = append(photoPaths, path)
+            }
+        }
+    }
+    
+    a.Reply(fmt.Sprintf("Downloaded %d photos", len(photoPaths)))
+    return nil
+})
+```
+
+### Process Album with Captions
+
+```go
+client.On("album", func(a *telegram.Album) error {
+    var captions []string
+    
+    for i, msg := range a.Messages {
+        text := msg.Text()
+        if text != "" {
+            captions = append(captions, 
+                fmt.Sprintf("%d. %s", i+1, text))
+        }
+    }
+    
+    if len(captions) > 0 {
+        a.Reply("Captions:\n" + strings.Join(captions, "\n"))
+    }
+    
+    return nil
+})
+```
+
+### Create Album Response
+
+```go
+client.On("album", func(a *telegram.Album) error {
+    // Process album
+    a.Reply("Processing your album...")
+    
+    // Create response album
+    responseMedia := []telegram.InputMedia{
+        &telegram.InputMediaPhoto{
+            File:    "processed1.jpg",
+            Caption: "Processed #1",
+        },
+        &telegram.InputMediaPhoto{
+            File:    "processed2.jpg",
+            Caption: "Processed #2",
+        },
+    }
+    
+    // Send as reply
+    _, err := client.SendAlbum(a.Messages[0].ChatID(), responseMedia, 
+        &telegram.MediaOptions{
+            ReplyID: a.Messages[0].ID,
+        })
+    
+    return err
+})
+```
+
+### Album Size Validation
+
+```go
+client.On("album", func(a *telegram.Album) error {
+    var totalSize int64
+    maxSize := int64(50 * 1024 * 1024) // 50 MB
+    
+    for _, msg := range a.Messages {
+        if doc := msg.Document(); doc != nil {
+            totalSize += doc.Size
+        }
+        if photo := msg.Photo(); photo != nil {
+            // Estimate photo size from largest size
+            if len(photo.Sizes) > 0 {
+                if size, ok := photo.Sizes[len(photo.Sizes)-1].(*PhotoSizeObj); ok {
+                    totalSize += int64(size.Size)
+                }
+            }
+        }
+    }
+    
+    if totalSize > maxSize {
+        a.Reply("Album too large! Maximum 50 MB allowed.")
+        return nil
+    }
+    
+    paths, _ := a.Download()
+    a.Reply(fmt.Sprintf("Downloaded %d files", len(paths)))
+    
+    return nil
+})
+```
+
+### Forward Album Selectively
+
+```go
+client.On("album", func(a *telegram.Album) error {
+    var photoIDs []int32
+    
+    // Collect only photo IDs
+    for _, msg := range a.Messages {
+        if msg.Photo() != nil {
+            photoIDs = append(photoIDs, msg.ID)
+        }
+    }
+    
+    if len(photoIDs) > 0 {
+        // Forward only photos
+        _, err := client.Forward(
+            targetChatID,
+            a.Messages[0].ChatID(),
+            photoIDs,
+        )
+        
+        if err == nil {
+            a.Reply(fmt.Sprintf("Forwarded %d photos", len(photoIDs)))
+        }
+    }
+    
+    return nil
+})
+```
+
+## Complete Example
+
+```go
+package main
+
+import (
+    "fmt"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    client, _ := telegram.NewClient(telegram.ClientConfig{
+        AppID: 6, AppHash: "app_hash",
+    })
+    
+    client.LoginBot("bot_token")
+    
+    client.On("album", func(a *telegram.Album) error {
+        count := len(a.Messages)
+        
+        fmt.Printf("Album received: %d items, GroupID: %d\n", 
+            count, a.GroupedID)
+        
+        // Analyze album contents
+        var photos, videos, others int
+        var totalSize int64
+        
+        for i, msg := range a.Messages {
+            fmt.Printf("%d. ID: %d, Type: %s\n", 
+                i+1, msg.ID, msg.MediaType())
+            
+            switch msg.MediaType() {
+            case "photo":
+                photos++
+            case "video":
+                videos++
+            default:
+                others++
+            }
+            
+            // Get size
+            if doc := msg.Document(); doc != nil {
+                totalSize += doc.Size
+            }
+        }
+        
+        // Send summary
+        summary := fmt.Sprintf(
+            "📦 Album Summary\n\n"+
+            "📸 Photos: %d\n"+
+            "🎥 Videos: %d\n"+
+            "📄 Other: %d\n"+
+            "📊 Total: %d items\n"+
+            "💾 Size: %.2f MB",
+            photos, videos, others, count,
+            float64(totalSize)/(1024*1024),
+        )
+        
+        a.Reply(summary)
+        
+        // Download if small enough
+        if totalSize < 10*1024*1024 { // 10 MB
+            paths, err := a.Download(&telegram.DownloadOptions{
+                Output: "albums/",
+            })
+            
+            if err == nil {
+                a.Reply(fmt.Sprintf("✅ Downloaded %d files", len(paths)))
+            }
+        } else {
+            a.Reply("⚠️ Album too large to download automatically")
+        }
+        
+        return nil
+    })
+    
+    client.Idle()
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Check Media Types" icon="image">
+    Always verify media types before processing
+  </Card>
+  <Card title="Size Validation" icon="scale-balanced">
+    Check total size before downloading albums
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation">
+    Handle errors when downloading individual files
+  </Card>
+  <Card title="Use First Message" icon="arrow-pointer">
+    Reply/respond methods use the first message
+  </Card>
+  <Card title="Iterate Safely" icon="shield-check">
+    Check if Messages array is not empty
+  </Card>
+  <Card title="Preserve Order" icon="arrow-down-1-9">
+    Messages are pre-sorted by ID, preserve order when needed
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="NewMessage" icon="message" href="/handlers/updates/newmessage">
+    Learn about individual messages
+  </Card>
+  <Card title="CallbackQuery" icon="mouse-pointer" href="/handlers/updates/callback">
+    Handle button clicks
+  </Card>
+  <Card title="InlineQuery" icon="search" href="/handlers/updates/inline">
+    Handle inline queries
+  </Card>
+  <Card title="Filters" icon="filter" href="/handlers/filters">
+    Filter albums effectively
+  </Card>
+</CardGroup>

@@ -1,0 +1,723 @@
+---
+title: "InlineQuery"
+description: "Handle inline queries and build inline results"
+---
+
+## Overview
+
+`InlineQuery` represents an inline query when users type `@yourbot query` in any chat. It allows bots to provide results that can be sent to any chat.
+
+## Structure
+
+```go
+type InlineQuery struct {
+    QueryID        int64
+    Query          string
+    OriginalUpdate *UpdateBotInlineQuery
+    Sender         *UserObj
+    SenderID       int64
+    Offset         string
+    PeerType       InlineQueryPeerType
+    Client         *Client
+}
+```
+
+## Basic Properties
+
+<ParamField path="QueryID" type="int64">
+  Unique query identifier
+  
+  ```go
+  queryID := q.QueryID
+  ```
+</ParamField>
+
+<ParamField path="Query" type="string">
+  Query text after bot username
+  
+  ```go
+  query := q.Query // Text after @bot
+  ```
+</ParamField>
+
+<ParamField path="Offset" type="string">
+  Pagination offset for next results
+  
+  ```go
+  offset := q.Offset
+  ```
+</ParamField>
+
+<ParamField path="PeerType" type="InlineQueryPeerType">
+  Type of chat where query is used
+  
+  ```go
+  peerType := q.PeerType
+  ```
+</ParamField>
+
+<ParamField path="Sender" type="*UserObj">
+  User who sent the query
+  
+  ```go
+  user := q.Sender
+  fmt.Println(user.FirstName)
+  ```
+</ParamField>
+
+## Query Text
+
+<CodeGroup>
+
+```go Full Query
+// Get complete query text
+text := q.Query
+```
+
+```go Query Args
+// Get arguments (text after first word)
+args := q.Args()
+// For "@bot hello world" -> "world"
+```
+
+</CodeGroup>
+
+## Answer Methods
+
+### Basic Answer
+
+```go
+// Answer with results
+results := []telegram.InputBotInlineResult{
+    // ... result items
+}
+
+success, err := q.Answer(results, telegram.InlineSendOptions{
+    CacheTime: 300, // Cache for 5 minutes
+    Private:   true, // Results specific to user
+})
+```
+
+### Using Builder
+
+```go
+// Use builder for easier result creation
+builder := q.Builder()
+
+// Add article
+builder.Article("Title", "Description", "Message text")
+
+// Add photo
+builder.Photo("https://example.com/photo.jpg")
+
+// Add document
+builder.Document("file.pdf")
+
+// Send all results
+q.Answer(builder.Results())
+```
+
+## Result Types
+
+### Article Results
+
+<Tabs>
+  <Tab title="Basic Article">
+    ```go
+    builder := q.Builder()
+    
+    builder.Article(
+        "Result Title",
+        "Result description",
+        "Message text when selected",
+    )
+    
+    q.Answer(builder.Results())
+    ```
+  </Tab>
+  <Tab title="With Options">
+    ```go
+    builder.Article(
+        "Title", 
+        "Description", 
+        "Text",
+        &telegram.ArticleOptions{
+            ParseMode: "HTML",
+            ReplyMarkup: telegram.ReplyInlineMarkup(
+                telegram.Row(
+                    telegram.URL("Visit", "https://example.com"),
+                ),
+            ),
+            LinkPreview: false,
+        },
+    )
+    ```
+  </Tab>
+  <Tab title="With Thumbnail">
+    ```go
+    builder.Article(
+        "Title",
+        "Description", 
+        "Text",
+        &telegram.ArticleOptions{
+            Thumb: telegram.InputWebDocument{
+                URL:      "https://example.com/thumb.jpg",
+                MimeType: "image/jpeg",
+            },
+        },
+    )
+    ```
+  </Tab>
+</Tabs>
+
+### Photo Results
+
+<Tabs>
+  <Tab title="From URL">
+    ```go
+    builder := q.Builder()
+    
+    builder.Photo("https://example.com/photo.jpg", 
+        &telegram.ArticleOptions{
+            Caption: "Photo caption",
+        })
+    
+    q.Answer(builder.Results())
+    ```
+  </Tab>
+  <Tab title="From File">
+    ```go
+    // Upload photo first
+    builder.Photo("local_photo.jpg", 
+        &telegram.ArticleOptions{
+            Caption:   "My photo",
+            ParseMode: "Markdown",
+        })
+    ```
+  </Tab>
+  <Tab title="With Buttons">
+    ```go
+    builder.Photo("photo.jpg", &telegram.ArticleOptions{
+        Caption: "Click a button",
+        ReplyMarkup: telegram.ReplyInlineMarkup(
+            telegram.Row(
+                telegram.URL("Open", "https://example.com"),
+                telegram.Data("Like", "like"),
+            ),
+        ),
+    })
+    ```
+  </Tab>
+</Tabs>
+
+### Document Results
+
+<Tabs>
+  <Tab title="Basic Document">
+    ```go
+    builder := q.Builder()
+    
+    builder.Document("document.pdf", 
+        &telegram.ArticleOptions{
+            Caption: "Document caption",
+        })
+    
+    q.Answer(builder.Results())
+    ```
+  </Tab>
+  <Tab title="With Details">
+    ```go
+    builder.Document("file.pdf", &telegram.ArticleOptions{
+        Title:       "File Title",
+        Description: "File description",
+        MimeType:    "application/pdf",
+        Caption:     "Download this file",
+    })
+    ```
+  </Tab>
+  <Tab title="Force Document">
+    ```go
+    // Force file as document (not media)
+    builder.Document("video.mp4", &telegram.ArticleOptions{
+        ForceDocument: true,
+        Caption:       "Download video",
+    })
+    ```
+  </Tab>
+</Tabs>
+
+### Special Result Types
+
+<CodeGroup>
+
+```go Location
+builder := q.Builder()
+
+builder.Article(
+    "My Location",
+    "Share location",
+    "",
+    &telegram.ArticleOptions{
+        Location: &telegram.InputBotInlineMessageMediaGeo{
+            GeoPoint: &telegram.InputGeoPointObj{
+                Lat:  40.7128,
+                Long: -74.0060,
+            },
+        },
+    },
+)
+```
+
+```go Venue
+builder.Article(
+    "Restaurant",
+    "Great food",
+    "",
+    &telegram.ArticleOptions{
+        Venue: &telegram.InputBotInlineMessageMediaVenue{
+            GeoPoint: &telegram.InputGeoPointObj{
+                Lat:  40.7128,
+                Long: -74.0060,
+            },
+            Title:   "Restaurant Name",
+            Address: "123 Main St",
+            Provider: "foursquare",
+            VenueID: "venue_id",
+        },
+    },
+)
+```
+
+```go Contact
+builder.Article(
+    "Contact",
+    "Share contact",
+    "",
+    &telegram.ArticleOptions{
+        Contact: &telegram.InputBotInlineMessageMediaContact{
+            PhoneNumber: "+1234567890",
+            FirstName:   "John",
+            LastName:    "Doe",
+        },
+    },
+)
+```
+
+```go Game
+builder.Game(
+    "game_id",
+    "game_short_name",
+    &telegram.ArticleOptions{
+        Caption: "Play game",
+    },
+)
+```
+
+</CodeGroup>
+
+## Chat Type Checks
+
+<Tabs>
+  <Tab title="Private">
+    ```go
+    if q.IsPrivate() {
+        // Query from private chat
+    }
+    ```
+  </Tab>
+  <Tab title="Group">
+    ```go
+    if q.IsGroup() {
+        // Query from group
+    }
+    ```
+  </Tab>
+  <Tab title="Channel">
+    ```go
+    if q.IsChannel() {
+        // Query from channel
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Pagination
+
+```go
+client.On("inline", func(q *telegram.InlineQuery) error {
+    builder := q.Builder()
+    
+    // Parse offset
+    offset := 0
+    if q.Offset != "" {
+        fmt.Sscanf(q.Offset, "%d", &offset)
+    }
+    
+    // Get results for this page
+    pageSize := 50
+    results := getResults(offset, pageSize)
+    
+    for _, result := range results {
+        builder.Article(
+            result.Title,
+            result.Description,
+            result.Text,
+        )
+    }
+    
+    // Set next offset
+    nextOffset := ""
+    if len(results) == pageSize {
+        nextOffset = fmt.Sprintf("%d", offset+pageSize)
+    }
+    
+    q.Answer(builder.Results(), telegram.InlineSendOptions{
+        NextOffset: nextOffset,
+    })
+    
+    return nil
+})
+```
+
+## Practical Examples
+
+### Search Results
+
+```go
+client.On("inline", func(q *telegram.InlineQuery) error {
+    query := q.Query
+    builder := q.Builder()
+    
+    if query == "" {
+        // Default results
+        builder.Article(
+            "Search",
+            "Type to search",
+            "No query provided",
+        )
+    } else {
+        // Search database/API
+        results := searchDatabase(query)
+        
+        for i, result := range results {
+            builder.Article(
+                result.Title,
+                result.Snippet,
+                result.FullText,
+                &telegram.ArticleOptions{
+                    ID:        fmt.Sprintf("result_%d", i),
+                    ParseMode: "HTML",
+                },
+            )
+        }
+        
+        if len(results) == 0 {
+            builder.Article(
+                "No Results",
+                "Try a different query",
+                "No results found for: " + query,
+            )
+        }
+    }
+    
+    q.Answer(builder.Results(), telegram.InlineSendOptions{
+        CacheTime: 60, // Cache for 1 minute
+    })
+    
+    return nil
+})
+```
+
+### Image Gallery
+
+```go
+client.On("inline", func(q *telegram.InlineQuery) error {
+    builder := q.Builder()
+    
+    images := []struct {
+        URL     string
+        Caption string
+    }{
+        {"https://example.com/1.jpg", "Image 1"},
+        {"https://example.com/2.jpg", "Image 2"},
+        {"https://example.com/3.jpg", "Image 3"},
+    }
+    
+    for i, img := range images {
+        builder.Photo(img.URL, &telegram.ArticleOptions{
+            ID:      fmt.Sprintf("img_%d", i),
+            Caption: img.Caption,
+            ReplyMarkup: telegram.ReplyInlineMarkup(
+                telegram.Row(
+                    telegram.URL("View Full", img.URL),
+                ),
+            ),
+        })
+    }
+    
+    q.Answer(builder.Results())
+    return nil
+})
+```
+
+### Dynamic Content
+
+```go
+client.On("inline", func(q *telegram.InlineQuery) error {
+    builder := q.Builder()
+    query := q.Query
+    
+    // Parse command from query
+    parts := strings.Fields(query)
+    if len(parts) == 0 {
+        builder.Article("Commands", "Available commands", 
+            "/weather\n/news\n/quote")
+        q.Answer(builder.Results())
+        return nil
+    }
+    
+    command := parts[0]
+    args := q.Args()
+    
+    switch command {
+    case "/weather":
+        weather := getWeather(args)
+        builder.Article(
+            "Weather",
+            args,
+            weather,
+            &telegram.ArticleOptions{
+                ParseMode: "HTML",
+            },
+        )
+        
+    case "/news":
+        news := getNews(args)
+        for i, article := range news {
+            builder.Article(
+                article.Title,
+                article.Source,
+                article.Content,
+                &telegram.ArticleOptions{
+                    ID: fmt.Sprintf("news_%d", i),
+                    Thumb: telegram.InputWebDocument{
+                        URL: article.ImageURL,
+                    },
+                },
+            )
+        }
+        
+    case "/quote":
+        quote := getRandomQuote()
+        builder.Article(
+            "Random Quote",
+            quote.Author,
+            quote.Text,
+        )
+    }
+    
+    q.Answer(builder.Results())
+    return nil
+})
+```
+
+### User-Specific Results
+
+```go
+client.On("inline", func(q *telegram.InlineQuery) error {
+    builder := q.Builder()
+    userID := q.SenderID
+    
+    // Get user-specific data
+    userData := getUserData(userID)
+    
+    for _, item := range userData.SavedItems {
+        builder.Article(
+            item.Title,
+            item.Description,
+            item.Content,
+            &telegram.ArticleOptions{
+                ID: item.ID,
+            },
+        )
+    }
+    
+    // Results are private to this user
+    q.Answer(builder.Results(), telegram.InlineSendOptions{
+        Private:   true,
+        CacheTime: 0, // Don't cache
+    })
+    
+    return nil
+})
+```
+
+## InlineSend (Chosen Result)
+
+### Handle Chosen Results
+
+```go
+client.On("choseninline", func(s *telegram.InlineSend) error {
+    fmt.Printf("User chose result: %s\n", s.ID)
+    
+    // Get the message
+    msg, err := s.GetMessage()
+    if err == nil {
+        fmt.Printf("Sent to chat: %d\n", msg.ChatID())
+    }
+    
+    // Edit the sent message
+    s.Edit("Updated content")
+    
+    return nil
+})
+```
+
+### InlineSend Properties
+
+<ParamField path="ID" type="string">
+  Result ID that was chosen
+  
+  ```go
+  resultID := s.ID
+  ```
+</ParamField>
+
+<ParamField path="ChatID()" type="int64">
+  Chat where result was sent
+  
+  ```go
+  chatID := s.ChatID()
+  ```
+</ParamField>
+
+<ParamField path="MessageID()" type="int32">
+  Message ID of sent result
+  
+  ```go
+  msgID := s.MessageID()
+  ```
+</ParamField>
+
+## Complete Example
+
+```go
+package main
+
+import (
+    "fmt"
+    "strings"
+    "github.com/amarnathcjd/gogram/telegram"
+)
+
+func main() {
+    client, _ := telegram.NewClient(telegram.ClientConfig{
+        AppID: 6, AppHash: "app_hash",
+    })
+    
+    client.LoginBot("bot_token")
+    
+    // Handle inline queries
+    client.On("inline", func(q *telegram.InlineQuery) error {
+        builder := q.Builder()
+        query := strings.ToLower(q.Query)
+        
+        if query == "" {
+            // Show help
+            builder.Article(
+                "How to use",
+                "Type a query to search",
+                "Examples:\n• weather London\n• news tech\n• image cat",
+            )
+        } else if strings.HasPrefix(query, "weather ") {
+            city := strings.TrimPrefix(query, "weather ")
+            builder.Article(
+                "Weather in " + city,
+                "Current conditions",
+                fmt.Sprintf("Temperature: 20°C\nCondition: Sunny"),
+                &telegram.ArticleOptions{
+                    ParseMode: "HTML",
+                },
+            )
+        } else if strings.HasPrefix(query, "image ") {
+            keyword := strings.TrimPrefix(query, "image ")
+            
+            // Mock image results
+            for i := 1; i <= 5; i++ {
+                builder.Photo(
+                    fmt.Sprintf("https://picsum.photos/400/300?random=%d", i),
+                    &telegram.ArticleOptions{
+                        Caption: fmt.Sprintf("%s #%d", keyword, i),
+                    },
+                )
+            }
+        } else {
+            // Generic search
+            builder.Article(
+                "Result 1",
+                "First result for: " + query,
+                "Content for " + query,
+            )
+            builder.Article(
+                "Result 2",
+                "Second result",
+                "More content here",
+            )
+        }
+        
+        q.Answer(builder.Results(), telegram.InlineSendOptions{
+            CacheTime: 300,
+        })
+        
+        return nil
+    })
+    
+    // Handle chosen results
+    client.On("choseninline", func(s *telegram.InlineSend) error {
+        fmt.Printf("User chose: %s in chat %d\n", s.ID, s.ChatID())
+        return nil
+    })
+    
+    client.Idle()
+}
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Fast Response" icon="bolt">
+    Answer queries quickly (< 1 second)
+  </Card>
+  <Card title="Relevant Results" icon="bullseye">
+    Show relevant results based on query
+  </Card>
+  <Card title="Use Pagination" icon="list">
+    Implement pagination for large result sets
+  </Card>
+  <Card title="Cache Wisely" icon="database">
+    Set appropriate cache times
+  </Card>
+  <Card title="Private Results" icon="lock">
+    Use private flag for user-specific data
+  </Card>
+  <Card title="Unique IDs" icon="fingerprint">
+    Use unique IDs for each result
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="NewMessage" icon="message" href="/handlers/updates/newmessage">
+    Learn about messages
+  </Card>
+  <Card title="Album" icon="images" href="/handlers/updates/album">
+    Handle media groups
+  </Card>
+  <Card title="CallbackQuery" icon="mouse-pointer" href="/handlers/updates/callback">
+    Handle button clicks
+  </Card>
+  <Card title="Filters" icon="filter" href="/handlers/filters">
+    Filter inline queries
+  </Card>
+</CardGroup>

@@ -1,0 +1,625 @@
+---
+title: "NewMessage"
+description: "Complete reference for the NewMessage update type"
+---
+
+## Overview
+
+`NewMessage` represents an incoming message update. It's the most commonly used update type and provides rich methods for interacting with messages.
+
+## Structure
+
+```go
+type NewMessage struct {
+    Action         MessageAction
+    Channel        *Channel
+    Chat           *ChatObj
+    Client         *Client
+    File           *CustomFile
+    ID             int32
+    Message        *MessageObj
+    OriginalUpdate Message
+    Peer           InputPeer
+    Sender         *UserObj
+    SenderChat     *Channel
+}
+```
+
+## Basic Properties
+
+### Message Information
+
+<ParamField path="ID" type="int32">
+  Message ID
+  
+  ```go
+  msgID := m.ID
+  ```
+</ParamField>
+
+<ParamField path="Text()" type="string">
+  Get message text
+  
+  ```go
+  text := m.Text()
+  ```
+</ParamField>
+
+<ParamField path="Date()" type="int32">
+  Message timestamp (Unix time)
+  
+  ```go
+  timestamp := m.Date()
+  ```
+</ParamField>
+
+### Sender Information
+
+<ParamField path="SenderID()" type="int64">
+  Get sender's user ID
+  
+  ```go
+  senderID := m.SenderID()
+  ```
+</ParamField>
+
+<ParamField path="GetSender()" type="(*UserObj, error)">
+  Get full sender user object
+  
+  ```go
+  sender, err := m.GetSender()
+  fmt.Println(sender.FirstName)
+  ```
+</ParamField>
+
+<ParamField path="Sender" type="*UserObj">
+  Direct access to sender object (may be nil)
+  
+  ```go
+  if m.Sender != nil {
+      fmt.Println(m.Sender.FirstName)
+  }
+  ```
+</ParamField>
+
+### Chat Information
+
+<ParamField path="ChatID()" type="int64">
+  Get chat ID (works for users, groups, channels)
+  
+  ```go
+  chatID := m.ChatID()
+  ```
+</ParamField>
+
+<ParamField path="ChannelID()" type="int64">
+  Get channel ID with -100 prefix
+  
+  ```go
+  channelID := m.ChannelID()
+  ```
+</ParamField>
+
+<ParamField path="ChatType()" type="string">
+  Get chat type: `user`, `chat`, `channel`
+  
+  ```go
+  if m.ChatType() == telegram.EntityUser {
+      // Private chat
+  }
+  ```
+</ParamField>
+
+## Reply Methods
+
+### Sending Replies
+
+<CodeGroup>
+
+```go Reply
+// Reply to the message
+m.Reply("Hello there!")
+
+// With options
+m.Reply("Hello!", telegram.SendOptions{
+    ParseMode: "HTML",
+})
+```
+
+```go Respond
+// Send message to same chat (without replying)
+m.Respond("New message")
+
+// With options
+m.Respond("Message", telegram.SendOptions{
+    ReplyMarkup: telegram.ReplyInlineMarkup(...),
+})
+```
+
+```go ReplyMedia
+// Reply with media
+m.ReplyMedia(&telegram.InputMediaPhoto{...}, telegram.MediaOptions{
+    Caption: "Photo caption",
+})
+```
+
+```go RespondMedia
+// Send media without replying
+m.RespondMedia(&telegram.InputMediaPhoto{...})
+```
+
+</CodeGroup>
+
+### Album Methods
+
+```go
+// Reply with album
+m.ReplyAlbum([]telegram.InputMedia{
+    &telegram.InputMediaPhoto{File: "photo1.jpg"},
+    &telegram.InputMediaPhoto{File: "photo2.jpg"},
+})
+
+// Send album without replying
+m.RespondAlbum([]telegram.InputMedia{...})
+```
+
+## Message Actions
+
+### Edit & Delete
+
+<CodeGroup>
+
+```go Edit
+// Edit message text
+m.Edit("Updated text")
+
+// Edit with options
+m.Edit("Updated", telegram.SendOptions{
+    ParseMode: "Markdown",
+})
+```
+
+```go Delete
+// Delete the message
+m.Delete()
+```
+
+```go React
+// Add reaction
+m.React("👍")
+
+// Multiple reactions
+m.React("👍", "❤️")
+```
+
+</CodeGroup>
+
+### Forward & Pin
+
+<CodeGroup>
+
+```go Forward
+// Forward to another chat
+m.ForwardTo(targetChatID)
+
+// With options
+m.ForwardTo(targetChatID, &telegram.ForwardOptions{
+    Silent: true,
+})
+```
+
+```go Pin/Unpin
+// Pin message
+m.Pin()
+
+// Pin silently
+m.Pin(&telegram.PinOptions{
+    Silent: true,
+})
+
+// Unpin message
+m.Unpin()
+```
+
+</CodeGroup>
+
+## Message Checks
+
+### Chat Type Checks
+
+<Tabs>
+  <Tab title="Private">
+    ```go
+    if m.IsPrivate() {
+        m.Reply("This is a private chat")
+    }
+    ```
+  </Tab>
+  <Tab title="Group">
+    ```go
+    if m.IsGroup() {
+        m.Reply("This is a group")
+    }
+    ```
+  </Tab>
+  <Tab title="Channel">
+    ```go
+    if m.IsChannel() {
+        m.Reply("This is a channel")
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Message Type Checks
+
+<Tabs>
+  <Tab title="Command">
+    ```go
+    if m.IsCommand() {
+        cmd := m.GetCommand()
+        fmt.Println("Command:", cmd)
+    }
+    ```
+  </Tab>
+  <Tab title="Reply">
+    ```go
+    if m.IsReply() {
+        replyMsg, _ := m.GetReplyMessage()
+        fmt.Println("Reply to:", replyMsg.Text())
+    }
+    ```
+  </Tab>
+  <Tab title="Forward">
+    ```go
+    if m.IsForward() {
+        m.Reply("This is a forwarded message")
+    }
+    ```
+  </Tab>
+  <Tab title="Media">
+    ```go
+    if m.IsMedia() {
+        mediaType := m.MediaType()
+        fmt.Println("Media type:", mediaType)
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Media Access
+
+### Getting Media
+
+<CodeGroup>
+
+```go Photo
+photo := m.Photo()
+if photo != nil {
+    path, _ := m.Download()
+}
+```
+
+```go Video
+video := m.Video()
+if video != nil {
+    fmt.Println("Size:", video.Size)
+}
+```
+
+```go Document
+doc := m.Document()
+if doc != nil {
+    fmt.Println("Filename:", doc.Attributes)
+}
+```
+
+```go Sticker
+sticker := m.Sticker()
+if sticker != nil {
+    m.Reply("Nice sticker!")
+}
+```
+
+```go Audio
+audio := m.Audio()
+if audio != nil {
+    // Handle audio
+}
+```
+
+```go Voice
+voice := m.Voice()
+if voice != nil {
+    // Handle voice message
+}
+```
+
+```go Animation
+animation := m.Animation()
+if animation != nil {
+    m.Reply("Nice GIF!")
+}
+```
+
+</CodeGroup>
+
+### Special Media Types
+
+<CodeGroup>
+
+```go Contact
+contact := m.Contact()
+if contact != nil {
+    fmt.Println(contact.PhoneNumber)
+}
+```
+
+```go Location
+geo := m.Geo()
+if geo != nil {
+    fmt.Printf("Lat: %f, Long: %f", geo.Lat, geo.Long)
+}
+```
+
+```go Poll
+poll := m.Poll()
+if poll != nil {
+    fmt.Println(poll.Poll.Question)
+}
+```
+
+```go Venue
+venue := m.Venue()
+if venue != nil {
+    fmt.Println(venue.Title)
+}
+```
+
+```go WebPage
+webpage := m.WebPage()
+if webpage != nil {
+    fmt.Println(webpage.URL)
+}
+```
+
+</CodeGroup>
+
+### Media Type Detection
+
+```go
+mediaType := m.MediaType()
+
+switch mediaType {
+case "photo":
+    path, _ := m.Download()
+case "video":
+    m.Reply("Got your video!")
+case "document":
+    m.Reply("Received document")
+case "contact":
+    m.Reply("Thanks for sharing contact")
+case "geo", "geo_live":
+    m.Reply("Location received")
+default:
+    m.Reply("Unsupported media type")
+}
+```
+
+## Reply Information
+
+### Getting Reply Details
+
+<CodeGroup>
+
+```go Reply ID
+replyID := m.ReplyToMsgID()
+// or
+replyID := m.ReplyID()
+```
+
+```go Reply Message
+if m.IsReply() {
+    replyMsg, err := m.GetReplyMessage()
+    if err == nil {
+        fmt.Println("Replied to:", replyMsg.Text())
+    }
+}
+```
+
+```go Reply Sender
+replySenderID := m.ReplySenderID()
+```
+
+```go Topic ID
+topicID, isTopic := m.TopicID()
+if isTopic {
+    fmt.Println("Forum topic:", topicID)
+}
+```
+
+</CodeGroup>
+
+## Text Processing
+
+### Text Extraction
+
+<CodeGroup>
+
+```go Text
+// Plain text
+text := m.Text()
+```
+
+```go Raw Text
+// Text with formatting
+rawText := m.RawText()
+
+// Markdown format
+markdown := m.RawText(true)
+```
+
+```go Command Args
+// Get arguments after command
+// For "/start hello world" -> "hello world"
+args := m.Args()
+```
+
+```go Command
+// Get command text
+cmd := m.GetCommand()
+// Returns "/start" for "/start@bot"
+```
+
+</CodeGroup>
+
+## Advanced Features
+
+### Conversations
+
+<CodeGroup>
+
+```go Ask Question
+// Ask and wait for response
+response, err := m.Ask("What's your name?")
+if err == nil {
+    m.Reply("Nice to meet you, " + response.Text())
+}
+```
+
+```go Wait for Click
+// Send message with button and wait for click
+m.Reply("Click me!", telegram.SendOptions{
+    ReplyMarkup: telegram.ReplyInlineMarkup(...),
+})
+
+callback, err := m.WaitClick()
+if err == nil {
+    callback.Answer("Button clicked!")
+}
+```
+
+```go Manual Conversation
+// Start conversation
+conv, _ := m.Conv(120) // 120 second timeout
+defer conv.Close()
+
+conv.Respond("What's your age?")
+response, _ := conv.GetResponse()
+
+conv.Respond("Where are you from?")
+location, _ := conv.GetResponse()
+```
+
+</CodeGroup>
+
+### Downloading Media
+
+```go
+// Download with default options
+path, err := m.Download()
+
+// Download to specific directory
+path, err := m.Download(&telegram.DownloadOptions{
+    Output: "downloads/",
+})
+
+// Download with progress
+path, err := m.Download(&telegram.DownloadOptions{
+    ProgressCallback: func(current, total int64) {
+        fmt.Printf("Progress: %d/%d\n", current, total)
+    },
+})
+```
+
+### Utilities
+
+<CodeGroup>
+
+```go Link
+// Get message link
+link := m.Link()
+// Public: https://t.me/username/123
+// Private: https://t.me/c/channelID/123
+```
+
+```go Mark Read
+// Mark message as read
+m.MarkRead()
+```
+
+```go Get Chat/Channel
+// Get full chat object
+chat, _ := m.GetChat()
+
+// Get full channel object
+channel, _ := m.GetChannel()
+```
+
+```go Media Group
+// Get all messages in album if in media group
+messages, _ := m.GetMediaGroup()
+```
+
+```go Send Action
+// Send typing indicator
+m.SendAction("typing")
+
+// Upload photo action
+m.SendAction("upload_photo")
+```
+
+</CodeGroup>
+
+## Complete Example
+
+```go
+client.On("cmd:start", func(m *telegram.NewMessage) error {
+   if m.IsMedia() {
+       m.Reply("Thanks for the media!")
+   } else {
+       m.Reply("Hello! Send me a photo or video.")
+   }
+    return nil
+}, telegram.FilterPrivate)
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Check for nil" icon="shield-check">
+    Always check if media/sender objects are nil before accessing
+  </Card>
+  <Card title="Handle errors" icon="triangle-exclamation">
+    Always handle errors from reply/respond methods
+  </Card>
+  <Card title="Use filters" icon="filter">
+    Filter messages early with FilterPrivate, FilterGroup, etc.
+  </Card>
+  <Card title="Conversations timeout" icon="clock">
+    Set appropriate timeouts for Ask() and Conv()
+  </Card>
+  <Card title="Download wisely" icon="download">
+    Check file size before downloading large files
+  </Card>
+  <Card title="Close conversations" icon="door-closed">
+    Always defer conv.Close() when using manual conversations
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Album" icon="images" href="/handlers/updates/album">
+    Handle media albums
+  </Card>
+  <Card title="CallbackQuery" icon="mouse-pointer" href="/handlers/updates/callback">
+    Learn about callback handling
+  </Card>
+  <Card title="InlineQuery" icon="search" href="/handlers/updates/inline">
+    Handle inline queries
+  </Card>
+  <Card title="Filters" icon="filter" href="/handlers/filters">
+    Master message filtering
+  </Card>
+</CardGroup>

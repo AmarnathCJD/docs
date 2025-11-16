@@ -1,0 +1,444 @@
+---
+title: "Filters"
+description: "Filter messages and callbacks with powerful filtering system"
+---
+
+## Overview
+
+Filters allow you to specify conditions that messages or callbacks must meet before handlers execute. They help you write cleaner code by avoiding manual condition checking.
+
+## Basic Filters
+
+### Chat Type Filters
+
+```go
+// Private chats only
+client.On("message", handler, telegram.FilterPrivate)
+
+// Groups only
+client.On("message", handler, telegram.FilterGroup)
+
+// Channels only
+client.On("message", handler, telegram.FilterChannel)
+```
+
+### Message Type Filters
+
+```go
+// Media messages
+client.On("message", handler, telegram.FilterMedia)
+
+// Commands
+client.On("message", handler, telegram.FilterCommand)
+
+// Replies
+client.On("message", handler, telegram.FilterReply)
+
+// Forwarded messages
+client.On("message", handler, telegram.FilterForward)
+
+// Messages from bots
+client.On("message", handler, telegram.FilterFromBot)
+
+// Mentions
+client.On("message", handler, telegram.FilterMention)
+
+// Edited messages
+client.On("message", handler, telegram.FilterEdited)
+```
+
+### Direction Filters
+
+```go
+// Outgoing messages (sent by you)
+client.On("message", handler, telegram.FilterOutgoing)
+
+// Incoming messages (received)
+client.On("message", handler, telegram.FilterIncoming)
+```
+
+## Media Filters
+
+### Specific Media Types
+
+```go
+// Photo messages
+client.On("message", handler, telegram.FilterPhoto)
+
+// Video messages
+client.On("message", handler, telegram.FilterVideo)
+
+// Document messages
+client.On("message", handler, telegram.FilterDocument)
+
+// Audio messages
+client.On("message", handler, telegram.FilterAudio)
+
+// Sticker messages
+client.On("message", handler, telegram.FilterSticker)
+
+// Animation/GIF messages
+client.On("message", handler, telegram.FilterAnimation)
+
+// Voice messages
+client.On("message", handler, telegram.FilterVoice)
+
+// Video notes (round videos)
+client.On("message", handler, telegram.FilterVideoNote)
+
+// Contact messages
+client.On("message", handler, telegram.FilterContact)
+
+// Location messages
+client.On("message", handler, telegram.FilterLocation)
+
+// Venue messages
+client.On("message", handler, telegram.FilterVenue)
+
+// Poll messages
+client.On("message", handler, telegram.FilterPoll)
+```
+
+### Multiple Media Types
+
+```go
+// Accept multiple media types
+client.On("message", handler, 
+    telegram.FilterMediaTypes("photo", "video", "animation"))
+```
+
+## Peer Filters
+
+### Filter by Users
+
+```go
+// Specific users only
+client.On("message", handler, telegram.FilterUsers(123456, 789012))
+
+// Blacklist users
+filter := telegram.FilterUsers(123456).AsBlacklist()
+client.On("message", handler, filter)
+```
+
+### Filter by Chats
+
+```go
+// Specific chats only
+client.On("message", handler, telegram.FilterChats(-1001234567890))
+
+// Multiple chats
+client.On("message", handler, 
+    telegram.FilterChats(-1001234567890, -1009876543210))
+```
+
+### Filter by Channels
+
+```go
+// Specific channels only
+client.On("message", handler, telegram.FilterChannels(-1001234567890))
+```
+
+## Text Filters
+
+### Text Length
+
+```go
+// Minimum text length
+client.On("message", handler, telegram.FilterMinLength(10))
+
+// Maximum text length
+client.On("message", handler, telegram.FilterMaxLength(100))
+
+// Messages with text
+client.On("message", handler, telegram.Filter{}.WithText())
+```
+
+## Combining Filters
+
+### Using Multiple Filters
+
+```go
+// Private chats with photos
+client.On("message", handler, 
+    telegram.FilterPrivate, 
+    telegram.FilterPhoto)
+
+// Groups with commands
+client.On("message", handler, 
+    telegram.FilterGroup, 
+    telegram.FilterCommand)
+
+// Private videos from specific users
+client.On("message", handler,
+    telegram.FilterPrivate,
+    telegram.FilterVideo,
+    telegram.FilterUsers(123456, 789012))
+```
+
+### AND Logic
+
+Combine multiple filters with AND logic:
+
+```go
+filter := telegram.FilterAnd(
+    telegram.FilterPrivate,
+    telegram.FilterPhoto,
+    telegram.FilterMinLength(5),
+)
+client.On("message", handler, filter)
+```
+
+### OR Logic
+
+Combine multiple filters with OR logic:
+
+```go
+filter := telegram.FilterOr(
+    telegram.FilterPhoto,
+    telegram.FilterVideo,
+    telegram.FilterAnimation,
+)
+client.On("message", handler, filter)
+```
+
+### NOT Logic
+
+Negate a filter:
+
+```go
+// Not from bots
+filter := telegram.FilterNot(telegram.FilterFromBot)
+client.On("message", handler, filter)
+
+// Not in groups
+filter := telegram.FilterNot(telegram.FilterGroup)
+client.On("message", handler, filter)
+```
+
+## Custom Filters
+
+### Function-Based Filters
+
+```go
+// Custom filter function
+client.On("message", handler, telegram.FilterFunc(func(m *telegram.NewMessage) bool {
+    return len(m.Text()) > 10 && m.SenderID() != 0
+}))
+
+// For callbacks
+client.On("callback", callbackHandler, telegram.FilterFuncCallback(func(c *telegram.CallbackQuery) bool {
+    return c.SenderID() == adminID
+}))
+```
+
+## Filter Builder
+
+### Chaining Filter Methods
+
+```go
+filter := telegram.NewFilter().
+    IsPrivate().
+    WithPhoto().
+    MinLen(5).
+    FromUsers(123456, 789012)
+
+client.On("message", handler, filter)
+```
+
+### All Builder Methods
+
+<CodeGroup>
+
+```go Chat Types
+filter := telegram.NewFilter().
+    IsPrivate().
+    IsGroup().
+    IsChannel()
+```
+
+```go Message Types
+filter := telegram.NewFilter().
+    IsMedia().
+    IsCommand().
+    IsReply().
+    IsForward().
+    IsFromBot().
+    IsMention().
+    IsOutgoing().
+    IsIncoming().
+    IsEdited()
+```
+
+```go Media Types
+filter := telegram.NewFilter().
+    WithPhoto().
+    WithVideo().
+    WithDocument().
+    WithAudio().
+    WithSticker().
+    WithAnimation().
+    WithVoice().
+    WithVideoNote().
+    WithContact().
+    WithLocation().
+    WithVenue().
+    WithPoll().
+    WithText()
+```
+
+```go Peers & Length
+filter := telegram.NewFilter().
+    FromUsers(123, 456).
+    FromChats(-100123).
+    FromChannels(-100456).
+    MinLen(10).
+    MaxLen(100)
+```
+
+</CodeGroup>
+
+## Practical Examples
+
+### Admin-Only Commands
+
+```go
+adminFilter := telegram.FilterFunc(func(m *telegram.NewMessage) bool {
+    adminIDs := []int64{123456, 789012}
+    for _, id := range adminIDs {
+        if m.SenderID() == id {
+            return true
+        }
+    }
+    return false
+})
+
+client.On("cmd:ban", func(m *telegram.NewMessage) error {
+    m.Reply("User banned!")
+    return nil
+}, adminFilter)
+```
+
+### Photo/Video Only in Private
+
+```go
+filter := telegram.FilterAnd(
+    telegram.FilterPrivate,
+    telegram.FilterOr(
+        telegram.FilterPhoto,
+        telegram.FilterVideo,
+    ),
+)
+
+client.On("message", func(m *telegram.NewMessage) error {
+    m.Reply("Nice photo/video!")
+    return nil
+}, filter)
+```
+
+### Long Messages in Groups
+
+```go
+client.On("message", func(m *telegram.NewMessage) error {
+    m.Reply("Please keep messages short in groups")
+    return nil
+}, telegram.FilterGroup, telegram.FilterMinLength(500))
+```
+
+### Blacklist Specific Users
+
+```go
+filter := telegram.FilterUsers(spammerID1, spammerID2).AsBlacklist()
+
+client.On("message", func(m *telegram.NewMessage) error {
+    // This handler won't execute for blacklisted users
+    return nil
+}, filter)
+```
+
+### Media Albums Only
+
+```go
+client.On("album", func(a *telegram.Album) error {
+    a.Messages[0].Reply("Received %d media items", len(a.Messages))
+    return nil
+})
+```
+
+### Callback from Specific Button
+
+```go
+client.On("callback:btn_approve", func(c *telegram.CallbackQuery) error {
+    c.Answer("Approved!")
+    return nil
+}, telegram.FilterFuncCallback(func(c *telegram.CallbackQuery) bool {
+    return c.SenderID() == adminID
+}))
+```
+
+## Filter Reference
+
+### Complete Filter List
+
+| Filter | Description |
+|--------|-------------|
+| `FilterPrivate` | Private chats only |
+| `FilterGroup` | Groups only |
+| `FilterChannel` | Channels only |
+| `FilterMedia` | Any media message |
+| `FilterCommand` | Command messages |
+| `FilterReply` | Reply messages |
+| `FilterForward` | Forwarded messages |
+| `FilterFromBot` | Messages from bots |
+| `FilterMention` | Messages with mentions |
+| `FilterOutgoing` | Outgoing messages |
+| `FilterIncoming` | Incoming messages |
+| `FilterEdited` | Edited messages |
+| `FilterPhoto` | Photo messages |
+| `FilterVideo` | Video messages |
+| `FilterDocument` | Document messages |
+| `FilterAudio` | Audio messages |
+| `FilterSticker` | Sticker messages |
+| `FilterAnimation` | Animation/GIF messages |
+| `FilterVoice` | Voice messages |
+| `FilterVideoNote` | Video note messages |
+| `FilterContact` | Contact messages |
+| `FilterLocation` | Location messages |
+| `FilterVenue` | Venue messages |
+| `FilterPoll` | Poll messages |
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Built-in Filters" icon="filter">
+    Prefer built-in filters over custom logic when possible
+  </Card>
+  <Card title="Combine Filters" icon="layer-group">
+    Use AND/OR logic to create complex conditions
+  </Card>
+  <Card title="Early Filtering" icon="gauge-high">
+    Filter as early as possible to improve performance
+  </Card>
+  <Card title="Custom Filters" icon="code">
+    Use FilterFunc for complex custom logic
+  </Card>
+  <Card title="Blacklists" icon="ban">
+    Use AsBlacklist() to exclude specific users/chats
+  </Card>
+  <Card title="Test Filters" icon="flask">
+    Test your filters thoroughly with different message types
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Event Handlers" icon="bolt" href="/handlers">
+    Back to event handlers
+  </Card>
+  <Card title="Update Types" icon="bell" href="/handlers/updates">
+    Explore update types
+  </Card>
+  <Card title="Examples" icon="code" href="/examples">
+    See practical examples
+  </Card>
+</CardGroup>

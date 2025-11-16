@@ -25,7 +25,24 @@
             "group": "Core Concepts",
             "pages": [
               "cache",
-              "proxy"
+              "proxy",
+              "handlers"
+            ]
+          },
+          {
+            "group": "Handlers",
+            "pages": [
+              "handlers/filters",
+              "handlers/updates"
+            ]
+          },
+          {
+            "group": "Update Types",
+            "pages": [
+              "handlers/updates/newmessage",
+              "handlers/updates/album",
+              "handlers/updates/callback",
+              "handlers/updates/inline"
             ]
           },
           {
