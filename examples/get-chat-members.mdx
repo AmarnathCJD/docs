@@ -30,7 +30,7 @@ func main() {
 	
 	// Get all admin members from a chat
 	// Use negative chat ID for groups/channels (e.g., -100123456789)
-	messages, count, _ := client.GetChatMembers(-100123456789, &telegram.ParticipantOptions{
+	members, count, _ := client.GetChatMembers(-100123456789, &telegram.ParticipantOptions{
 		Filter: &telegram.ChannelParticipantsAdmins{}, // Filter for admins only
 	})
 	
@@ -41,7 +41,7 @@ func main() {
 	fmt.Printf("Total Admins: %d\n", count)
 	
 	// Iterate through each admin member
-	for _, m := range messages {
+	for _, m := range members {
 		fmt.Printf("Admin: %s (ID: %d)\n", m.User.FirstName, m.User.ID)
 	}
 
