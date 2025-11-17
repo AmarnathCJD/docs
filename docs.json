@@ -96,6 +96,11 @@
           "icon": "play"
         },
         {
+          "anchor": "Session Generator",
+          "href": "https://sess.gogram.fun",
+          "icon": "key"
+        },
+        {
           "anchor": "GitHub",
           "href": "https://github.com/amarnathcjd/gogram",
           "icon": "github"
