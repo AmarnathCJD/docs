@@ -72,6 +72,13 @@
             ]
           },
           {
+            "group": "Community",
+            "icon": "users",
+            "pages": [
+              "projects"
+            ]
+          },
+          {
             "group": "Help",
             "icon": "circle-question",
             "pages": [

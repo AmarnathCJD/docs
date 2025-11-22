@@ -12,6 +12,10 @@ Gogram includes a built-in caching system that stores peer information (users, c
   **Why caching is necessary:** Telegram sometimes assumes you already have the access hash for a peer and sends "min" constructors instead, which lack the access hash needed to interact with that peer. The cache stores full peer information to prevent this issue.
 </Note>
 
+<Tip>
+  **Cache File Protection**: Cache files are now automatically bound to the user ID of the logged-in bot or user account. This prevents the use of cache files created with one session by another session, eliminating issues caused by invalid access hashes.
+</Tip>
+
 ## What Gets Cached?
 
 The cache stores:
@@ -376,7 +380,6 @@ Ensure:
 2. `DisableCache` is `false` (default)
 3. File has write permissions
 4. Program exits gracefully (cache is written on updates)
-```
 
 ## Next Steps
 
