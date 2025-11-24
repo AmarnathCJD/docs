@@ -44,6 +44,13 @@
             ]
           },
           {
+            "group": "Community",
+            "icon": "users",
+            "pages": [
+              "projects"
+            ]
+          },
+          {
             "group": "Examples",
             "icon": "code",
             "pages": [
@@ -69,13 +76,6 @@
             "icon": "shield",
             "pages": [
               "advanced"
-            ]
-          },
-          {
-            "group": "Community",
-            "icon": "users",
-            "pages": [
-              "projects"
             ]
           },
           {
