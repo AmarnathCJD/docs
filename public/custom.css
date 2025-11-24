@@ -1,0 +1,20 @@
+/* Disable copy notification on accordion headings */
+.accordion-button::after {
+  display: none !important;
+}
+
+/* Hide the copy icon that appears on hover */
+.accordion-button .copy-icon {
+  display: none !important;
+}
+
+/* Prevent the "Copied!" toast notification */
+[data-radix-toast-viewport] {
+  pointer-events: none;
+}
+
+/* Alternative: Hide all copy-related elements in accordions */
+.accordion .copy-button,
+.accordion-header .copy-button {
+  display: none !important;
+}
